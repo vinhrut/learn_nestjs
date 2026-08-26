@@ -1,0 +1,393 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model attachments {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  task_id     String    @db.Uuid
+  uploaded_by String    @db.Uuid
+  file_url    String
+  file_name   String    @db.VarChar(255)
+  mime_type   String?   @db.VarChar(100)
+  size_bytes  BigInt?
+  created_at  DateTime  @default(now()) @db.Timestamp(6)
+  deleted_at  DateTime? @db.Timestamp(6)
+  tasks       tasks     @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_attachments_task")
+  users       users     @relation(fields: [uploaded_by], references: [id], onUpdate: NoAction, map: "fk_attachments_uploader")
+
+  @@index([task_id], map: "idx_attachments_task_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model manager_users {
+  manager_id                            String   @db.Uuid
+  user_id                               String   @unique @db.Uuid
+  created_at                            DateTime @default(now()) @db.Timestamp(6)
+  users_manager_users_manager_idTousers users    @relation("manager_users_manager_idTousers", fields: [manager_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_manager_users_manager")
+  users_manager_users_user_idTousers    users    @relation("manager_users_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_manager_users_user")
+
+  @@id([manager_id, user_id], map: "pk_manager_users")
+  @@index([manager_id], map: "idx_manager_users_manager_id")
+}
+
+model notifications {
+  id         String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String            @db.Uuid
+  task_id    String?           @db.Uuid
+  type       notification_type
+  title      String            @db.VarChar(255)
+  message    String?
+  is_read    Boolean           @default(false)
+  created_at DateTime          @default(now()) @db.Timestamp(6)
+  read_at    DateTime?         @db.Timestamp(6)
+  tasks      tasks?            @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_notifications_task")
+  users      users             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_notifications_user")
+
+  @@index([created_at], map: "idx_notifications_created_at")
+  @@index([is_read], map: "idx_notifications_is_read")
+  @@index([task_id], map: "idx_notifications_task_id")
+  @@index([type], map: "idx_notifications_type")
+  @@index([user_id], map: "idx_notifications_user_id")
+  @@index([user_id, is_read], map: "idx_notifications_user_read")
+}
+
+model project_members {
+  project_id   String              @db.Uuid
+  user_id      String              @db.Uuid
+  project_role project_member_role @default(MEMBER)
+  joined_at    DateTime            @default(now()) @db.Timestamp(6)
+  projects     projects            @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_project_members_project")
+  users        users               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_project_members_user")
+
+  @@id([project_id, user_id], map: "pk_project_members")
+  @@index([project_id], map: "idx_project_members_project_id")
+  @@index([user_id], map: "idx_project_members_user_id")
+}
+
+model projects {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String            @db.VarChar(255)
+  code            String            @unique @db.VarChar(50)
+  description     String?
+  owner_id        String            @db.Uuid
+  status          project_status    @default(PLANNING)
+  created_at      DateTime          @default(now()) @db.Timestamp(6)
+  updated_at      DateTime          @default(now()) @db.Timestamp(6)
+  deleted_at      DateTime?         @db.Timestamp(6)
+  project_members project_members[]
+  users           users             @relation(fields: [owner_id], references: [id], onUpdate: NoAction, map: "fk_projects_owner")
+  tasks           tasks[]
+
+  @@index([created_at], map: "idx_projects_created_at")
+  @@index([owner_id], map: "idx_projects_owner_id")
+  @@index([status], map: "idx_projects_status")
+}
+
+model refresh_tokens {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  token_hash String    @db.VarChar(255)
+  expires_at DateTime  @db.Timestamp(6)
+  revoked_at DateTime? @db.Timestamp(6)
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_refresh_tokens_user")
+
+  @@index([expires_at], map: "idx_refresh_tokens_expires_at")
+  @@index([user_id], map: "idx_refresh_tokens_user_id")
+}
+
+model roles {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        role_code    @unique
+  name        String       @db.VarChar(100)
+  description String?
+  created_at  DateTime     @default(now()) @db.Timestamp(6)
+  updated_at  DateTime     @default(now()) @db.Timestamp(6)
+  user_roles  user_roles[]
+}
+
+model task_assignment_requests {
+  id                                                 String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  task_id                                            String          @db.Uuid
+  requester_id                                       String          @db.Uuid
+  assigner_id                                        String          @db.Uuid
+  assignee_id                                        String          @db.Uuid
+  status                                             approval_status @default(PENDING)
+  requested_at                                       DateTime        @default(now()) @db.Timestamp(6)
+  reviewed_by                                        String?         @db.Uuid
+  reviewed_at                                        DateTime?       @db.Timestamp(6)
+  reject_reason                                      String?
+  created_at                                         DateTime        @default(now()) @db.Timestamp(6)
+  updated_at                                         DateTime        @default(now()) @db.Timestamp(6)
+  users_task_assignment_requests_assignee_idTousers  users           @relation("task_assignment_requests_assignee_idTousers", fields: [assignee_id], references: [id], onUpdate: NoAction, map: "fk_tar_assignee")
+  users_task_assignment_requests_assigner_idTousers  users           @relation("task_assignment_requests_assigner_idTousers", fields: [assigner_id], references: [id], onUpdate: NoAction, map: "fk_tar_assigner")
+  users_task_assignment_requests_requester_idTousers users           @relation("task_assignment_requests_requester_idTousers", fields: [requester_id], references: [id], onUpdate: NoAction, map: "fk_tar_requester")
+  users_task_assignment_requests_reviewed_byTousers  users?          @relation("task_assignment_requests_reviewed_byTousers", fields: [reviewed_by], references: [id], onUpdate: NoAction, map: "fk_tar_reviewer")
+  tasks                                              tasks           @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tar_task")
+
+  @@index([assignee_id], map: "idx_tar_assignee_id")
+  @@index([assigner_id], map: "idx_tar_assigner_id")
+  @@index([requested_at], map: "idx_tar_requested_at")
+  @@index([requester_id], map: "idx_tar_requester_id")
+  @@index([reviewed_by], map: "idx_tar_reviewed_by")
+  @@index([status], map: "idx_tar_status")
+  @@index([task_id], map: "idx_tar_task_id")
+}
+
+model task_checklists {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  task_id    String   @db.Uuid
+  title      String   @db.VarChar(255)
+  is_done    Boolean  @default(false)
+  position   Int      @default(0)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @default(now()) @db.Timestamp(6)
+  tasks      tasks    @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_task_checklists_task")
+
+  @@index([task_id], map: "idx_task_checklists_task_id")
+}
+
+model task_comments {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  task_id    String    @db.Uuid
+  user_id    String    @db.Uuid
+  content    String
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  updated_at DateTime  @default(now()) @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+  tasks      tasks     @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_task_comments_task")
+  users      users     @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "fk_task_comments_user")
+
+  @@index([created_at], map: "idx_task_comments_created_at")
+  @@index([task_id], map: "idx_task_comments_task_id")
+}
+
+model task_histories {
+  id                                          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  task_id                                     String         @db.Uuid
+  actor_id                                    String         @db.Uuid
+  action                                      history_action
+  old_status                                  task_status?
+  new_status                                  task_status?
+  old_assignee_id                             String?        @db.Uuid
+  new_assignee_id                             String?        @db.Uuid
+  old_assigner_id                             String?        @db.Uuid
+  new_assigner_id                             String?        @db.Uuid
+  comment                                     String?
+  metadata                                    Json?
+  created_at                                  DateTime       @default(now()) @db.Timestamp(6)
+  users_task_histories_actor_idTousers        users          @relation("task_histories_actor_idTousers", fields: [actor_id], references: [id], onUpdate: NoAction, map: "fk_th_actor")
+  users_task_histories_new_assignee_idTousers users?         @relation("task_histories_new_assignee_idTousers", fields: [new_assignee_id], references: [id], onUpdate: NoAction, map: "fk_th_new_assignee")
+  users_task_histories_new_assigner_idTousers users?         @relation("task_histories_new_assigner_idTousers", fields: [new_assigner_id], references: [id], onUpdate: NoAction, map: "fk_th_new_assigner")
+  users_task_histories_old_assignee_idTousers users?         @relation("task_histories_old_assignee_idTousers", fields: [old_assignee_id], references: [id], onUpdate: NoAction, map: "fk_th_old_assignee")
+  users_task_histories_old_assigner_idTousers users?         @relation("task_histories_old_assigner_idTousers", fields: [old_assigner_id], references: [id], onUpdate: NoAction, map: "fk_th_old_assigner")
+  tasks                                       tasks          @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_th_task")
+
+  @@index([action], map: "idx_th_action")
+  @@index([actor_id], map: "idx_th_actor_id")
+  @@index([created_at], map: "idx_th_created_at")
+  @@index([task_id], map: "idx_th_task_id")
+  @@index([task_id, created_at], map: "idx_th_task_time")
+}
+
+model task_reminders {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  task_id           String          @db.Uuid
+  user_id           String          @db.Uuid
+  due_date_snapshot DateTime        @db.Timestamp(6)
+  status            reminder_status @default(PENDING)
+  scheduled_for     DateTime        @db.Timestamp(6)
+  sent_at           DateTime?       @db.Timestamp(6)
+  created_at        DateTime        @default(now()) @db.Timestamp(6)
+  tasks             tasks           @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_task_reminders_task")
+  users             users           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_task_reminders_user")
+
+  @@unique([task_id, user_id, due_date_snapshot, scheduled_for], map: "uq_task_reminders_dedupe")
+  @@index([scheduled_for], map: "idx_task_reminders_scheduled_for")
+  @@index([status], map: "idx_task_reminders_status")
+  @@index([task_id], map: "idx_task_reminders_task_id")
+  @@index([user_id], map: "idx_task_reminders_user_id")
+}
+
+model tasks {
+  id                             String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  project_id                     String                     @db.Uuid
+  title                          String                     @db.VarChar(255)
+  description                    String?
+  priority                       task_priority              @default(MEDIUM)
+  status                         task_status                @default(DRAFT)
+  due_date                       DateTime?                  @db.Timestamp(6)
+  board_position                 Float                      @default(0)
+  creator_id                     String                     @db.Uuid
+  assigner_id                    String?                    @db.Uuid
+  assignee_id                    String?                    @db.Uuid
+  assignment_status              assignment_status          @default(NOT_ASSIGNED)
+  created_at                     DateTime                   @default(now()) @db.Timestamp(6)
+  updated_at                     DateTime                   @default(now()) @db.Timestamp(6)
+  deleted_at                     DateTime?                  @db.Timestamp(6)
+  attachments                    attachments[]
+  notifications                  notifications[]
+  task_assignment_requests       task_assignment_requests[]
+  task_checklists                task_checklists[]
+  task_comments                  task_comments[]
+  task_histories                 task_histories[]
+  task_reminders                 task_reminders[]
+  users_tasks_assignee_idTousers users?                     @relation("tasks_assignee_idTousers", fields: [assignee_id], references: [id], onUpdate: NoAction, map: "fk_tasks_assignee")
+  users_tasks_assigner_idTousers users?                     @relation("tasks_assigner_idTousers", fields: [assigner_id], references: [id], onUpdate: NoAction, map: "fk_tasks_assigner")
+  users_tasks_creator_idTousers  users                      @relation("tasks_creator_idTousers", fields: [creator_id], references: [id], onUpdate: NoAction, map: "fk_tasks_creator")
+  projects                       projects                   @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tasks_project")
+
+  @@index([assignee_id], map: "idx_tasks_assignee_id")
+  @@index([assignee_id, status], map: "idx_tasks_assignee_status")
+  @@index([assigner_id], map: "idx_tasks_assigner_id")
+  @@index([assigner_id, status], map: "idx_tasks_assigner_status")
+  @@index([assignment_status], map: "idx_tasks_assignment_status")
+  @@index([created_at], map: "idx_tasks_created_at")
+  @@index([creator_id], map: "idx_tasks_creator_id")
+  @@index([due_date], map: "idx_tasks_due_date")
+  @@index([priority], map: "idx_tasks_priority")
+  @@index([project_id], map: "idx_tasks_project_id")
+  @@index([project_id, status], map: "idx_tasks_project_status")
+  @@index([status], map: "idx_tasks_status")
+}
+
+model user_roles {
+  user_id    String   @db.Uuid
+  role_id    String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  roles      roles    @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_roles_role")
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_roles_user")
+
+  @@id([user_id, role_id], map: "pk_user_roles")
+  @@index([role_id], map: "idx_user_roles_role_id")
+}
+
+model users {
+  id                                                                    String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username                                                              String                     @unique @db.VarChar(100)
+  email                                                                 String                     @unique @db.VarChar(255)
+  password_hash                                                         String                     @db.VarChar(255)
+  full_name                                                             String?                    @db.VarChar(255)
+  phone                                                                 String?                    @db.VarChar(30)
+  avatar_url                                                            String?                    @db.VarChar(500)
+  status                                                                user_status                @default(ACTIVE)
+  created_at                                                            DateTime                   @default(now()) @db.Timestamp(6)
+  updated_at                                                            DateTime                   @default(now()) @db.Timestamp(6)
+  deleted_at                                                            DateTime?                  @db.Timestamp(6)
+  attachments                                                           attachments[]
+  manager_users_manager_users_manager_idTousers                         manager_users[]            @relation("manager_users_manager_idTousers")
+  manager_users_manager_users_user_idTousers                            manager_users?             @relation("manager_users_user_idTousers")
+  notifications                                                         notifications[]
+  project_members                                                       project_members[]
+  projects                                                              projects[]
+  refresh_tokens                                                        refresh_tokens[]
+  task_assignment_requests_task_assignment_requests_assignee_idTousers  task_assignment_requests[] @relation("task_assignment_requests_assignee_idTousers")
+  task_assignment_requests_task_assignment_requests_assigner_idTousers  task_assignment_requests[] @relation("task_assignment_requests_assigner_idTousers")
+  task_assignment_requests_task_assignment_requests_requester_idTousers task_assignment_requests[] @relation("task_assignment_requests_requester_idTousers")
+  task_assignment_requests_task_assignment_requests_reviewed_byTousers  task_assignment_requests[] @relation("task_assignment_requests_reviewed_byTousers")
+  task_comments                                                         task_comments[]
+  task_histories_task_histories_actor_idTousers                         task_histories[]           @relation("task_histories_actor_idTousers")
+  task_histories_task_histories_new_assignee_idTousers                  task_histories[]           @relation("task_histories_new_assignee_idTousers")
+  task_histories_task_histories_new_assigner_idTousers                  task_histories[]           @relation("task_histories_new_assigner_idTousers")
+  task_histories_task_histories_old_assignee_idTousers                  task_histories[]           @relation("task_histories_old_assignee_idTousers")
+  task_histories_task_histories_old_assigner_idTousers                  task_histories[]           @relation("task_histories_old_assigner_idTousers")
+  task_reminders                                                        task_reminders[]
+  tasks_tasks_assignee_idTousers                                        tasks[]                    @relation("tasks_assignee_idTousers")
+  tasks_tasks_assigner_idTousers                                        tasks[]                    @relation("tasks_assigner_idTousers")
+  tasks_tasks_creator_idTousers                                         tasks[]                    @relation("tasks_creator_idTousers")
+  user_roles                                                            user_roles[]
+
+  @@index([status], map: "idx_users_status")
+}
+
+enum approval_status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum assignment_status {
+  NOT_ASSIGNED
+  WAITING_APPROVAL
+  APPROVED
+  ASSIGNED
+  REJECTED
+  CANCELLED
+}
+
+enum history_action {
+  CREATED
+  UPDATED
+  ASSIGNED
+  REASSIGNED
+  SUBMITTED
+  APPROVED
+  REJECTED
+  STATUS_CHANGED
+  COMMENTED
+  CLOSED
+}
+
+enum notification_type {
+  TASK_ASSIGNED
+  APPROVAL_REQUEST
+  APPROVAL_APPROVED
+  APPROVAL_REJECTED
+  STATUS_CHANGED
+  TASK_DUE
+  SYSTEM
+}
+
+enum project_member_role {
+  OWNER
+  MANAGER
+  MEMBER
+  VIEWER
+}
+
+enum project_status {
+  PLANNING
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum reminder_status {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum role_code {
+  BA
+  ADMIN
+  USER
+}
+
+enum task_priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum task_status {
+  DRAFT
+  WAITING_APPROVAL
+  NEW
+  DOING
+  DONE
+  CLOSED
+  REJECTED
+}
+
+enum user_status {
+  ACTIVE
+  INACTIVE
+  LOCKED
+}
