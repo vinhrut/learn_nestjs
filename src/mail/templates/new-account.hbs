@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+  <body style="font-family: Arial, sans-serif; color: #1f2933; line-height: 1.5;">
+    <h2>Xin chào {{#if full_name}}{{full_name}}{{else}}bạn{{/if}},</h2>
+
+    <p>Tài khoản của bạn trên hệ thống <strong>LearnNest</strong> đã được quản trị viên tạo thành công. Dưới đây là thông tin đăng nhập:</p>
+
+    <table cellpadding="8" style="border-collapse: collapse; margin: 16px 0;">
+      <tr>
+        <td style="border: 1px solid #e4e7eb;"><strong>Tên đăng nhập</strong></td>
+        <td style="border: 1px solid #e4e7eb;">{{username}}</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #e4e7eb;"><strong>Mật khẩu tạm thời</strong></td>
+        <td style="border: 1px solid #e4e7eb;">{{password}}</td>
+      </tr>
+    </table>
+
+    <p style="color: #d9480f;">
+      <strong>Lưu ý bảo mật:</strong> vì lý do an toàn, vui lòng đăng nhập và đổi mật khẩu ngay sau lần đăng nhập đầu tiên.
+    </p>
+
+    <p>Trân trọng,<br />LearnNest</p>
+  </body>
+</html>

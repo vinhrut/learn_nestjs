@@ -1,7 +1,15 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsUUID } from 'class-validator';
 export class CreateComment {
+    @IsString()
+    @IsNotEmpty()
     task_id!: string;
+
+    @IsUUID()
+    @IsNotEmpty()
     user_id!: string;
+
+    @IsString()
+    @IsNotEmpty()
     content!: string;
 }
 export class DeleteCommentDto {

@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+  <body style="font-family: Arial, sans-serif; color: #1f2933; line-height: 1.5;">
+    <h2>Xin chào {{#if full_name}}{{full_name}}{{else}}bạn{{/if}},</h2>
+
+    <p>Quản trị viên vừa cập nhật một số thông tin trên tài khoản <strong>LearnNest</strong> của bạn:</p>
+
+    <ul style="margin: 16px 0; padding-left: 20px;">
+      {{#each changes}}
+      <li style="margin: 4px 0;">{{this}}</li>
+      {{/each}}
+    </ul>
+
+    {{#if temporaryPassword}}
+    <div style="margin: 20px 0; padding: 14px 20px; background: #fff4e0; border: 1px solid #f6c453; border-radius: 8px;">
+      <p style="margin: 0 0 6px 0;"><strong>Mật khẩu mới của bạn:</strong></p>
+      <span style="font-size: 20px; font-weight: bold; letter-spacing: 2px; color: #8a5300;">{{temporaryPassword}}</span>
+      <p style="margin: 8px 0 0 0; color: #d9480f;">Vui lòng đăng nhập và đổi lại mật khẩu ngay sau đó.</p>
+    </div>
+    {{/if}}
+
+    <p style="color: #d9480f;">
+      <strong>Nếu bạn không yêu cầu thay đổi này</strong>, hãy liên hệ ngay với quản trị viên.
+    </p>
+
+    <p>Trân trọng,<br />LearnNest</p>
+  </body>
+</html>

@@ -55,6 +55,7 @@ export class CommentRepository implements ICommentRepository {
     }
     async create(dto: CreateComment): Promise<any> {
         try {
+            console.log(dto)
             if (!dto.content || !dto.task_id || !dto.user_id) {
                 return "Dữ liệu truyền vào thiếu"
             }

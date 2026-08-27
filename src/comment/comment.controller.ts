@@ -47,9 +47,6 @@ export class CommentController {
     ): Promise<string> {
         const comment =
             await this.commentService.create(dto);
-        console.log('🔥 POST create comment');
-        console.log('taskId:', dto.task_id);
-        console.log('comment:', comment);
         this.commentGateway.emitNewComment(
             dto.task_id,
             comment,
