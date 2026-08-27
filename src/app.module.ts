@@ -7,7 +7,9 @@ import { RolesModule } from './roles/roles.module';
 import { ProjectsModule } from './projects/projects.module';
 import { TasksModule } from './tasks/tasks.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { TaskHistoryModule } from './task-history/task-history.module';
 import { MailModule } from './mail/mail.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { MailModule } from './mail/mail.module';
     ProjectsModule,
     TasksModule,
     NotificationsModule,
+    TaskHistoryModule,
+    DashboardModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }
