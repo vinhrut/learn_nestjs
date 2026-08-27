@@ -162,7 +162,7 @@ export class UsersService {
       }
     }
 
-    await this.findActiveById(id);
+    const before = await this.findActiveById(id);
 
     const data: Prisma.usersUpdateInput = {
       full_name: dto.full_name,
@@ -197,10 +197,82 @@ export class UsersService {
         data,
         ...userWithRoles,
       });
+
+      // Đổi mật khẩu (kể cả do admin đặt lại) → thu hồi mọi phiên đăng nhập.
+      if (dto.password) {
+        await this.revokeActiveRefreshTokens(id);
+      }
+
+      // Gửi mail cho user khi quản trị viên sửa tài khoản của NGƯỜI KHÁC.
+      // User tự sửa hồ sơ của mình thì không gửi.
+      if (isAdmin && requester.id !== id) {
+        const changes = this.diffUserChanges(before, dto);
+        if (changes.length > 0) {
+          void this.mailService.sendAccountUpdatedEmail(user.email, {
+            full_name: user.full_name ?? undefined,
+            changes,
+            temporaryPassword: dto.password ?? undefined,
+          });
+        }
+      }
+
       return this.sanitizeUser(user);
     } catch (error) {
       throw this.mapPrismaError(error);
     }
+  }
+
+  /**
+   * Đổi mật khẩu cho user (dùng chung cho luồng quên/đổi mật khẩu ở AuthService):
+   * hash mật khẩu mới và thu hồi toàn bộ refresh token đang hoạt động.
+   */
+  async changePassword(userId: string, newPassword: string): Promise<void> {
+    await this.prisma.users.update({
+      where: { id: userId },
+      data: {
+        password_hash: await bcrypt.hash(newPassword, 10),
+        updated_at: new Date(),
+      },
+    });
+    await this.revokeActiveRefreshTokens(userId);
+  }
+
+  /** Nhãn tiếng Việt của các trường thực sự thay đổi giữa `before` và `dto`. */
+  private diffUserChanges(before: UserWithRoles, dto: UpdateUserDto): string[] {
+    const changes: string[] = [];
+    const check = (
+      value: string | undefined,
+      current: string | null,
+      label: string,
+    ) => {
+      if (value !== undefined && value !== (current ?? '')) {
+        changes.push(label);
+      }
+    };
+
+    check(dto.full_name, before.full_name, 'Họ và tên');
+    check(dto.phone, before.phone, 'Số điện thoại');
+    check(dto.avatar_url, before.avatar_url, 'Ảnh đại diện');
+    check(dto.username, before.username, 'Tên đăng nhập');
+    check(dto.email, before.email, 'Email');
+
+    if (dto.status !== undefined && dto.status !== before.status) {
+      changes.push('Trạng thái');
+    }
+
+    if (dto.roleCodes) {
+      const currentRoles = [...this.toRoleCodes(before)].sort().join(',');
+      const nextRoles = [...dto.roleCodes].sort().join(',');
+      if (currentRoles !== nextRoles) {
+        changes.push('Vai trò');
+      }
+    }
+
+    if (dto.password) {
+      changes.push('Mật khẩu');
+    }
+
+    return changes;
   }
 
   async lock(id: string, requesterId: string) {
