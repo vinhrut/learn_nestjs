@@ -1,10 +1,16 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { createHash, randomUUID } from 'crypto';
 import type { StringValue } from 'ms';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
+import { OtpService } from '../otp/otp.service';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtPayload, RefreshJwtPayload } from './types/jwt-payload.type';
@@ -16,6 +22,8 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly otpService: OtpService,
+    private readonly mailService: MailService,
   ) {}
 
   async login(dto: LoginDto) {
@@ -48,6 +56,7 @@ export class AuthService {
         email: user.email,
         full_name: user.full_name,
         status: user.status,
+        roles: this.usersService.toRoleCodes(user),
       },
     };
   }
@@ -104,6 +113,83 @@ export class AuthService {
     }
 
     return { success: true };
+  }
+
+  /**
+   * Quên mật khẩu: gửi mã OTP về email. Luôn kết thúc êm (không tiết lộ email có
+   * tồn tại hay không, không báo lỗi khi đang trong thời gian chờ gửi lại).
+   */
+  async forgotPassword(email: string): Promise<void> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user || user.deleted_at || user.status !== 'ACTIVE') {
+      return;
+    }
+
+    const issued = await this.otpService.issue(user.id, 'PASSWORD_RESET');
+    if (!issued) {
+      return;
+    }
+
+    void this.mailService.sendPasswordResetOtpEmail(user.email, {
+      code: issued.code,
+      expiresInMinutes: issued.expiresInMinutes,
+      full_name: user.full_name ?? undefined,
+    });
+  }
+
+  /** Đặt lại mật khẩu bằng mã OTP nhận qua email. */
+  async resetPassword(
+    email: string,
+    code: string,
+    newPassword: string,
+    confirmNewPassword: string,
+  ): Promise<void> {
+    if (newPassword !== confirmNewPassword) {
+      throw new BadRequestException('Xác nhận mật khẩu không khớp');
+    }
+
+    const user = await this.usersService.findByEmail(email);
+    if (!user || user.deleted_at || user.status !== 'ACTIVE') {
+      throw new BadRequestException('Mã xác nhận không hợp lệ hoặc đã hết hạn');
+    }
+
+    await this.otpService.verifyAndConsume(user.id, 'PASSWORD_RESET', code);
+    await this.usersService.changePassword(user.id, newPassword);
+
+    void this.mailService.sendPasswordChangedEmail(user.email, {
+      full_name: user.full_name ?? undefined,
+    });
+  }
+
+  /** Đổi mật khẩu khi đang đăng nhập: xác thực mật khẩu hiện tại (không cần OTP). */
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+    confirmNewPassword: string,
+  ): Promise<void> {
+    if (newPassword !== confirmNewPassword) {
+      throw new BadRequestException('Xác nhận mật khẩu không khớp');
+    }
+
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('Phiên đăng nhập không hợp lệ');
+    }
+
+    const matches = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!matches) {
+      throw new BadRequestException('Mật khẩu hiện tại không đúng');
+    }
+    if (currentPassword === newPassword) {
+      throw new BadRequestException('Mật khẩu mới phải khác mật khẩu hiện tại');
+    }
+
+    await this.usersService.changePassword(userId, newPassword);
+
+    void this.mailService.sendPasswordChangedEmail(user.email, {
+      full_name: user.full_name ?? undefined,
+    });
   }
 
   private async issueTokens(
