@@ -15,6 +15,8 @@ const roles_module_1 = require("./roles/roles.module");
 const projects_module_1 = require("./projects/projects.module");
 const tasks_module_1 = require("./tasks/tasks.module");
 const notifications_module_1 = require("./notifications/notifications.module");
+const comment_module_1 = require("./comment/comment.module");
+const config_1 = require("@nestjs/config");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -28,6 +30,10 @@ exports.AppModule = AppModule = __decorate([
             projects_module_1.ProjectsModule,
             tasks_module_1.TasksModule,
             notifications_module_1.NotificationsModule,
+            comment_module_1.CommentModule,
+            config_1.ConfigModule.forRoot({
+                isGlobal: true,
+            })
         ],
     })
 ], AppModule);
