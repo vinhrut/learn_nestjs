@@ -36,13 +36,52 @@ export class MailService {
     );
   }
 
-  // TODO: implement khi làm tính năng gửi OTP xác nhận đổi mật khẩu.
-  // sendOtpEmail(
-  //   to: string,
-  //   data: { otp: string; expiresInMinutes: number },
-  // ): Promise<void> {
-  //   return this.sendTemplateMail(to, 'Mã xác nhận OTP', 'otp', data);
-  // }
+  /** Mã OTP cho luồng quên mật khẩu. */
+  sendPasswordResetOtpEmail(
+    to: string,
+    data: { code: string; expiresInMinutes: number; full_name?: string },
+  ): Promise<void> {
+    return this.sendTemplateMail(
+      to,
+      'Mã xác nhận đặt lại mật khẩu',
+      'password-reset-otp',
+      {
+        code: data.code,
+        expiresInMinutes: data.expiresInMinutes,
+        full_name: data.full_name ?? undefined,
+      },
+    );
+  }
+
+  /** Thông báo bảo mật sau khi mật khẩu được đổi (tự đổi hoặc đặt lại qua OTP). */
+  sendPasswordChangedEmail(
+    to: string,
+    data: { full_name?: string },
+  ): Promise<void> {
+    return this.sendTemplateMail(
+      to,
+      'Mật khẩu của bạn đã được thay đổi',
+      'password-changed',
+      { full_name: data.full_name ?? undefined },
+    );
+  }
+
+  /** Thông báo khi quản trị viên cập nhật thông tin tài khoản của user. */
+  sendAccountUpdatedEmail(
+    to: string,
+    data: { changes: string[]; full_name?: string; temporaryPassword?: string },
+  ): Promise<void> {
+    return this.sendTemplateMail(
+      to,
+      'Thông tin tài khoản của bạn đã được cập nhật',
+      'account-updated',
+      {
+        changes: data.changes,
+        full_name: data.full_name ?? undefined,
+        temporaryPassword: data.temporaryPassword ?? undefined,
+      },
+    );
+  }
 
   // TODO: implement khi làm tính năng thông báo giao task.
   // sendTaskAssignedEmail(
