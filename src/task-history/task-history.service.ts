@@ -29,8 +29,16 @@ export class TaskHistoryService {
     }
     async findByTask(taskId: string) {
         return this.prisma.task_histories.findMany({
-            where: { task_id: taskId },
-            orderBy: { created_at: 'asc' },
-        })
+            where: {
+                task_id: taskId,
+            },
+            orderBy: {
+                created_at: 'asc',
+            },
+        });
+    }
+
+    async log(dto: CreateTaskHistoryDto) {
+        return this.create(dto);
     }
 }

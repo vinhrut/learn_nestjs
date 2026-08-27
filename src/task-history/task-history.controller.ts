@@ -1,7 +1,15 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    Param,
+    UseGuards,
+} from '@nestjs/common';
+
 import { TaskHistoryService } from './task-history.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('task-history')
+@UseGuards(JwtAuthGuard)
 export class TaskHistoryController {
     constructor(
         private readonly taskHistoryService: TaskHistoryService,
