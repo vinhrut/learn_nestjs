@@ -7,6 +7,7 @@ import { RolesModule } from './roles/roles.module';
 import { ProjectsModule } from './projects/projects.module';
 import { TasksModule } from './tasks/tasks.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { CommentModule } from './comment/comment.module';
 import { TaskHistoryModule } from './task-history/task-history.module';
 import { MailModule } from './mail/mail.module';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -22,8 +23,13 @@ import { DashboardModule } from './dashboard/dashboard.module';
     ProjectsModule,
     TasksModule,
     NotificationsModule,
+    CommentModule,
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     TaskHistoryModule,
     DashboardModule,
   ],
 })
 export class AppModule { }
+
