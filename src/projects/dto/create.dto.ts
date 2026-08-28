@@ -1,9 +1,14 @@
 import {
+  IsArray,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
+
+import { project_status } from '@prisma/client';
 
 export class CreateProjectDto {
   @IsString()
@@ -19,4 +24,13 @@ export class CreateProjectDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsEnum(project_status)
+  status?: project_status;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  member_ids?: string[];
 }

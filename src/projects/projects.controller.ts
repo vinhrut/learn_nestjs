@@ -54,6 +54,30 @@ export class ProjectController {
   }
 
   // ==========================================
+  // GET PROJECT MEMBERS
+  // ==========================================
+
+  @Get(':id/members')
+  getMembers(
+    @Param('id') projectId: string,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.projectService.getMembers(projectId, user);
+  }
+
+  // ==========================================
+  // GET AVAILABLE USERS (for adding members)
+  // ==========================================
+
+  @Get(':id/available-users')
+  getAvailableUsers(
+    @Param('id') projectId: string,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.projectService.getAvailableUsers(projectId, user);
+  }
+
+  // ==========================================
   // CREATE PROJECT
   // ==========================================
 
@@ -62,10 +86,7 @@ export class ProjectController {
     @Body() dto: CreateProjectDto,
     @CurrentUser() user: JwtUser,
   ) {
-    return this.projectService.create(
-      dto,
-      user,
-    );
+    return this.projectService.create(dto, user);
   }
 
   // ==========================================
@@ -75,16 +96,10 @@ export class ProjectController {
   @Patch(':id')
   update(
     @Param('id') projectId: string,
-
     @Body() dto: UpdateProjectDto,
-
     @CurrentUser() user: JwtUser,
   ) {
-    return this.projectService.update(
-      projectId,
-      dto,
-      user,
-    );
+    return this.projectService.update(projectId, dto, user);
   }
 
   // ==========================================
@@ -94,16 +109,10 @@ export class ProjectController {
   @Post(':id/members')
   addMember(
     @Param('id') projectId: string,
-
     @Body() dto: AddProjectMemberDto,
-
     @CurrentUser() user: JwtUser,
   ) {
-    return this.projectService.addMember(
-      projectId,
-      dto,
-      user,
-    );
+    return this.projectService.addMember(projectId, dto, user);
   }
 
   // ==========================================
@@ -113,15 +122,9 @@ export class ProjectController {
   @Delete(':id/members/:userId')
   removeMember(
     @Param('id') projectId: string,
-
     @Param('userId') memberId: string,
-
     @CurrentUser() user: JwtUser,
   ) {
-    return this.projectService.removeMember(
-      projectId,
-      memberId,
-      user,
-    );
+    return this.projectService.removeMember(projectId, memberId, user);
   }
 }

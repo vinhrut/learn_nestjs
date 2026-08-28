@@ -387,6 +387,7 @@ enum role_code {
   BA
   ADMIN
   USER
+  LEAD
 }
 
 enum task_priority {
