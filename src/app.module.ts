@@ -11,11 +11,14 @@ import { CommentModule } from './comment/comment.module';
 import { TaskHistoryModule } from './task-history/task-history.module';
 import { MailModule } from './mail/mail.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { RealtimeModule } from './realtime/realtime.module';
+import { TaskVinhModule } from './task_vinh/task-vinh.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     MailModule,
+    RealtimeModule,
     PrismaModule,
     UsersModule,
     AuthModule,
@@ -24,12 +27,9 @@ import { DashboardModule } from './dashboard/dashboard.module';
     TasksModule,
     NotificationsModule,
     CommentModule,
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
     TaskHistoryModule,
     DashboardModule,
+    TaskVinhModule,
   ],
 })
 export class AppModule { }
-
