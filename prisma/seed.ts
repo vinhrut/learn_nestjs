@@ -52,6 +52,33 @@ async function main() {
 
     console.log(`Seeded user: ${user.email} [${seedUser.roles.join(', ')}]`);
   }
+
+  // Project mẫu — cần projectId hợp lệ khi test luồng giao task (task_vinh).
+  const admin = await prisma.users.findUnique({
+    where: { email: 'admin@gmail.com' },
+    select: { id: true },
+  });
+
+  if (admin) {
+    const seedProjects = [
+      { code: 'PRJ-A', name: 'Project A' },
+      { code: 'PRJ-B', name: 'Project B' },
+      { code: 'PRJ-C', name: 'Project C' },
+    ];
+
+    for (const seedProject of seedProjects) {
+      const project = await prisma.projects.upsert({
+        where: { code: seedProject.code },
+        update: {},
+        create: {
+          code: seedProject.code,
+          name: seedProject.name,
+          owner_id: admin.id,
+        },
+      });
+      console.log(`Seeded project: ${project.code} -> ${project.id}`);
+    }
+  }
 }
 
 main()

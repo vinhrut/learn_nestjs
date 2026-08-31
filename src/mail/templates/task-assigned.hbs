@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+  <body style="font-family: Arial, sans-serif; color: #1f2933; line-height: 1.5;">
+    <h2>Xin chào {{#if full_name}}{{full_name}}{{else}}bạn{{/if}},</h2>
+
+    <p>Bạn vừa được giao một công việc mới trên hệ thống <strong>LearnNest</strong>.</p>
+
+    <table cellpadding="8" style="border-collapse: collapse; margin: 16px 0;">
+      <tr>
+        <td style="border: 1px solid #e4e7eb;"><strong>Công việc</strong></td>
+        <td style="border: 1px solid #e4e7eb;">{{taskTitle}}</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #e4e7eb;"><strong>Người giao</strong></td>
+        <td style="border: 1px solid #e4e7eb;">{{assignerName}}</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #e4e7eb;"><strong>Độ ưu tiên</strong></td>
+        <td style="border: 1px solid #e4e7eb;">{{priority}}</td>
+      </tr>
+      {{#if dueDate}}
+      <tr>
+        <td style="border: 1px solid #e4e7eb;"><strong>Hạn hoàn thành</strong></td>
+        <td style="border: 1px solid #e4e7eb;">{{dueDate}}</td>
+      </tr>
+      {{/if}}
+    </table>
+
+    <p>Vui lòng đăng nhập vào hệ thống để xem chi tiết và bắt đầu thực hiện.</p>
+
+    <p>Trân trọng,<br />LearnNest</p>
+  </body>
+</html>
