@@ -48,10 +48,7 @@ let DashboardService = class DashboardService {
                 where: {
                     user_id: userId,
                     project_role: {
-                        in: [
-                            client_1.project_member_role.OWNER,
-                            client_1.project_member_role.MANAGER,
-                        ],
+                        in: [client_1.project_member_role.OWNER, client_1.project_member_role.MANAGER],
                     },
                 },
                 select: {
@@ -154,10 +151,7 @@ let DashboardService = class DashboardService {
                         lt: now,
                     },
                     status: {
-                        notIn: [
-                            client_1.task_status.DONE,
-                            client_1.task_status.CLOSED,
-                        ],
+                        notIn: [client_1.task_status.DONE, client_1.task_status.CLOSED],
                     },
                 },
             }),
@@ -169,10 +163,7 @@ let DashboardService = class DashboardService {
                         lte: next24Hours,
                     },
                     status: {
-                        notIn: [
-                            client_1.task_status.DONE,
-                            client_1.task_status.CLOSED,
-                        ],
+                        notIn: [client_1.task_status.DONE, client_1.task_status.CLOSED],
                     },
                 },
             }),
@@ -350,10 +341,7 @@ let DashboardService = class DashboardService {
                     lt: now,
                 },
                 status: {
-                    notIn: [
-                        client_1.task_status.DONE,
-                        client_1.task_status.CLOSED,
-                    ],
+                    notIn: [client_1.task_status.DONE, client_1.task_status.CLOSED],
                 },
             },
         });
@@ -365,10 +353,7 @@ let DashboardService = class DashboardService {
                     lte: next24Hours,
                 },
                 status: {
-                    notIn: [
-                        client_1.task_status.DONE,
-                        client_1.task_status.CLOSED,
-                    ],
+                    notIn: [client_1.task_status.DONE, client_1.task_status.CLOSED],
                 },
             },
         });

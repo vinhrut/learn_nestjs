@@ -16,9 +16,12 @@ const roles_module_1 = require("./roles/roles.module");
 const projects_module_1 = require("./projects/projects.module");
 const tasks_module_1 = require("./tasks/tasks.module");
 const notifications_module_1 = require("./notifications/notifications.module");
+const comment_module_1 = require("./comment/comment.module");
 const task_history_module_1 = require("./task-history/task-history.module");
 const mail_module_1 = require("./mail/mail.module");
 const dashboard_module_1 = require("./dashboard/dashboard.module");
+const realtime_module_1 = require("./realtime/realtime.module");
+const task_vinh_module_1 = require("./task_vinh/task-vinh.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -27,6 +30,7 @@ exports.AppModule = AppModule = __decorate([
         imports: [
             config_1.ConfigModule.forRoot({ isGlobal: true }),
             mail_module_1.MailModule,
+            realtime_module_1.RealtimeModule,
             prisma_module_1.PrismaModule,
             users_module_1.UsersModule,
             auth_module_1.AuthModule,
@@ -34,8 +38,10 @@ exports.AppModule = AppModule = __decorate([
             projects_module_1.ProjectsModule,
             tasks_module_1.TasksModule,
             notifications_module_1.NotificationsModule,
+            comment_module_1.CommentModule,
             task_history_module_1.TaskHistoryModule,
             dashboard_module_1.DashboardModule,
+            task_vinh_module_1.TaskVinhModule,
         ],
     })
 ], AppModule);

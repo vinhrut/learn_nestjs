@@ -22,4 +22,11 @@ export declare class MailService {
         full_name?: string;
         temporaryPassword?: string;
     }): Promise<void>;
+    sendTaskAssignedEmail(to: string, data: {
+        taskTitle: string;
+        assignerName: string;
+        priority: string;
+        dueDate?: string;
+        full_name?: string;
+    }): Promise<void>;
 }

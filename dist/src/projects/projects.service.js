@@ -58,10 +58,10 @@ let ProjectService = class ProjectService {
                 },
             });
             if (dto.member_ids && dto.member_ids.length > 0) {
-                const otherMemberIds = dto.member_ids.filter(id => id !== user.id);
+                const otherMemberIds = dto.member_ids.filter((id) => id !== user.id);
                 if (otherMemberIds.length > 0) {
                     await tx.project_members.createMany({
-                        data: otherMemberIds.map(userId => ({
+                        data: otherMemberIds.map((userId) => ({
                             project_id: project.id,
                             user_id: userId,
                             project_role: 'MEMBER',
@@ -180,7 +180,7 @@ let ProjectService = class ProjectService {
                 joined_at: 'asc',
             },
         });
-        return members.map(member => ({
+        return members.map((member) => ({
             project_id: member.project_id,
             user_id: member.user_id,
             project_role: member.project_role,
@@ -208,7 +208,7 @@ let ProjectService = class ProjectService {
                 user_id: true,
             },
         });
-        const excludedUserIds = currentMemberIds.map(m => m.user_id);
+        const excludedUserIds = currentMemberIds.map((m) => m.user_id);
         const availableUsers = await this.prisma.users.findMany({
             where: {
                 deleted_at: null,
@@ -231,7 +231,7 @@ let ProjectService = class ProjectService {
                 full_name: 'asc',
             },
         });
-        return availableUsers.map(user => ({
+        return availableUsers.map((user) => ({
             id: user.id,
             username: user.username,
             email: user.email,

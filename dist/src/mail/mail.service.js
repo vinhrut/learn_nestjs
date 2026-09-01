@@ -47,6 +47,15 @@ let MailService = MailService_1 = class MailService {
             temporaryPassword: data.temporaryPassword ?? undefined,
         });
     }
+    sendTaskAssignedEmail(to, data) {
+        return this.sendTemplateMail(to, 'Bạn được giao một công việc mới', 'task-assigned', {
+            taskTitle: data.taskTitle,
+            assignerName: data.assignerName,
+            priority: data.priority,
+            dueDate: data.dueDate ?? undefined,
+            full_name: data.full_name ?? undefined,
+        });
+    }
 };
 exports.MailService = MailService;
 exports.MailService = MailService = MailService_1 = __decorate([
