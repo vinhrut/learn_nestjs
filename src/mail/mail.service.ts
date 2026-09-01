@@ -83,16 +83,28 @@ export class MailService {
     );
   }
 
-  // TODO: implement khi làm tính năng thông báo giao task.
-  // sendTaskAssignedEmail(
-  //   to: string,
-  //   data: { taskName: string; assignedBy: string; dueDate?: Date },
-  // ): Promise<void> {
-  //   return this.sendTemplateMail(
-  //     to,
-  //     'Bạn được giao một task mới',
-  //     'task-assigned',
-  //     data,
-  //   );
-  // }
+  /** Thông báo khi admin giao một công việc mới cho user. */
+  sendTaskAssignedEmail(
+    to: string,
+    data: {
+      taskTitle: string;
+      assignerName: string;
+      priority: string;
+      dueDate?: string;
+      full_name?: string;
+    },
+  ): Promise<void> {
+    return this.sendTemplateMail(
+      to,
+      'Bạn được giao một công việc mới',
+      'task-assigned',
+      {
+        taskTitle: data.taskTitle,
+        assignerName: data.assignerName,
+        priority: data.priority,
+        dueDate: data.dueDate ?? undefined,
+        full_name: data.full_name ?? undefined,
+      },
+    );
+  }
 }
