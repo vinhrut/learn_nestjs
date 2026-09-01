@@ -8,6 +8,6 @@ export class ChangePasswordDto {
   @MinLength(8)
   newPassword: string;
 
-@IsString()
-confirmNewPassword: string;
+  @IsString()
+  confirmNewPassword: string;
 }

@@ -57,46 +57,48 @@ export class TaskVinhService {
     const priority = dto.priority ?? task_priority.MEDIUM;
     const dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
 
-    const { task, notification } = await this.prisma.$transaction(async (tx) => {
-      const task = await tx.tasks.create({
-        data: {
-          project_id: dto.projectId,
-          title: dto.title,
-          description: dto.description,
-          priority,
-          due_date: dueDate,
-          status: 'NEW',
-          assignment_status: 'ASSIGNED',
-          creator_id: adminId,
-          assigner_id: adminId,
-          assignee_id: dto.assigneeId,
-        },
-        ...taskCard,
-      });
+    const { task, notification } = await this.prisma.$transaction(
+      async (tx) => {
+        const task = await tx.tasks.create({
+          data: {
+            project_id: dto.projectId,
+            title: dto.title,
+            description: dto.description,
+            priority,
+            due_date: dueDate,
+            status: 'NEW',
+            assignment_status: 'ASSIGNED',
+            creator_id: adminId,
+            assigner_id: adminId,
+            assignee_id: dto.assigneeId,
+          },
+          ...taskCard,
+        });
 
-      await tx.task_histories.create({
-        data: {
-          task_id: task.id,
-          actor_id: adminId,
-          action: 'ASSIGNED',
-          new_status: 'NEW',
-          new_assignee_id: dto.assigneeId,
-          new_assigner_id: adminId,
-        },
-      });
+        await tx.task_histories.create({
+          data: {
+            task_id: task.id,
+            actor_id: adminId,
+            action: 'ASSIGNED',
+            new_status: 'NEW',
+            new_assignee_id: dto.assigneeId,
+            new_assigner_id: adminId,
+          },
+        });
 
-      const notification = await tx.notifications.create({
-        data: {
-          user_id: dto.assigneeId,
-          task_id: task.id,
-          type: 'TASK_ASSIGNED',
-          title: 'Bạn được giao một công việc mới',
-          message: task.title,
-        },
-      });
+        const notification = await tx.notifications.create({
+          data: {
+            user_id: dto.assigneeId,
+            task_id: task.id,
+            type: 'TASK_ASSIGNED',
+            title: 'Bạn được giao một công việc mới',
+            message: task.title,
+          },
+        });
 
-      return { task, notification };
-    });
+        return { task, notification };
+      },
+    );
 
     // Đẩy realtime + email SAU khi transaction commit. Không await email.
     this.realtime.emitToUser(dto.assigneeId, REALTIME_EVENT.NOTIFICATION, {

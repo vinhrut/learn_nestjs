@@ -32,4 +32,4 @@ import { TaskVinhModule } from './task_vinh/task-vinh.module';
     TaskVinhModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}

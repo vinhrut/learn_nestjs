@@ -23,18 +23,14 @@ import { AddProjectMemberDto } from './dto/add-project-memeber.dto';
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
 export class ProjectController {
-  constructor(
-    private readonly projectService: ProjectService,
-  ) {}
+  constructor(private readonly projectService: ProjectService) {}
 
   // ==========================================
   // GET MY PROJECTS
   // ==========================================
 
   @Get()
-  findMyProjects(
-    @CurrentUser() user: JwtUser,
-  ) {
+  findMyProjects(@CurrentUser() user: JwtUser) {
     return this.projectService.findMyProjects(user);
   }
 
@@ -43,14 +39,8 @@ export class ProjectController {
   // ==========================================
 
   @Get(':id')
-  findOne(
-    @Param('id') projectId: string,
-    @CurrentUser() user: JwtUser,
-  ) {
-    return this.projectService.findOne(
-      projectId,
-      user,
-    );
+  findOne(@Param('id') projectId: string, @CurrentUser() user: JwtUser) {
+    return this.projectService.findOne(projectId, user);
   }
 
   // ==========================================
@@ -58,10 +48,7 @@ export class ProjectController {
   // ==========================================
 
   @Get(':id/members')
-  getMembers(
-    @Param('id') projectId: string,
-    @CurrentUser() user: JwtUser,
-  ) {
+  getMembers(@Param('id') projectId: string, @CurrentUser() user: JwtUser) {
     return this.projectService.getMembers(projectId, user);
   }
 
@@ -82,10 +69,7 @@ export class ProjectController {
   // ==========================================
 
   @Post()
-  create(
-    @Body() dto: CreateProjectDto,
-    @CurrentUser() user: JwtUser,
-  ) {
+  create(@Body() dto: CreateProjectDto, @CurrentUser() user: JwtUser) {
     return this.projectService.create(dto, user);
   }
 
