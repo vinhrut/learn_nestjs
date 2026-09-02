@@ -12,7 +12,6 @@ import { TaskHistoryModule } from './task-history/task-history.module';
 import { MailModule } from './mail/mail.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { RealtimeModule } from './realtime/realtime.module';
-import { TaskVinhModule } from './task_vinh/task-vinh.module';
 
 @Module({
   imports: [
@@ -29,7 +28,6 @@ import { TaskVinhModule } from './task_vinh/task-vinh.module';
     CommentModule,
     TaskHistoryModule,
     DashboardModule,
-    TaskVinhModule,
   ],
 })
 export class AppModule {}

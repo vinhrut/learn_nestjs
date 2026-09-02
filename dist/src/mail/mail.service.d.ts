@@ -5,7 +5,7 @@ export declare class MailService {
     constructor(mailerService: MailerService);
     private sendTemplateMail;
     sendNewAccountEmail(to: string, data: {
-        username: string;
+        email: string;
         password: string;
         full_name?: string;
     }): Promise<void>;
@@ -27,6 +27,13 @@ export declare class MailService {
         assignerName: string;
         priority: string;
         dueDate?: string;
+        full_name?: string;
+    }): Promise<void>;
+    sendProjectMemberAddedEmail(to: string, data: {
+        projectName: string;
+        projectCode: string;
+        projectRole: string;
+        inviterName: string;
         full_name?: string;
     }): Promise<void>;
 }

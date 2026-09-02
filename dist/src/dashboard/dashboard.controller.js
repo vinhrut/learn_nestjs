@@ -14,40 +14,21 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DashboardController = void 0;
 const common_1 = require("@nestjs/common");
+const client_1 = require("@prisma/client");
 const dashboard_service_1 = require("./dashboard.service");
+const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../auth/guards/roles.guard");
 const current_user_decorator_1 = require("../auth/decorators/current-user.decorator");
-const prisma_service_1 = require("../prisma/prisma.service");
 let DashboardController = class DashboardController {
     dashboardService;
-    prisma;
-    constructor(dashboardService, prisma) {
+    constructor(dashboardService) {
         this.dashboardService = dashboardService;
-        this.prisma = prisma;
     }
     async getOverview(user) {
         return this.dashboardService.getOverview(user.id);
     }
-    async getAdminOverview(user) {
-        const dbUser = await this.prisma.users.findUnique({
-            where: {
-                id: user.id,
-            },
-            include: {
-                user_roles: {
-                    include: {
-                        roles: true,
-                    },
-                },
-            },
-        });
-        if (!dbUser) {
-            throw new common_1.ForbiddenException('User không tồn tại');
-        }
-        const isAdmin = dbUser.user_roles.some((userRole) => userRole.roles.code === 'ADMIN');
-        if (!isAdmin) {
-            throw new common_1.ForbiddenException('Chỉ Admin mới được truy cập Dashboard Admin');
-        }
+    async getAdminOverview() {
         return this.dashboardService.getAdminOverview();
     }
 };
@@ -61,16 +42,15 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], DashboardController.prototype, "getOverview", null);
 __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.role_code.ADMIN),
     (0, common_1.Get)('admin/overview'),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], DashboardController.prototype, "getAdminOverview", null);
 exports.DashboardController = DashboardController = __decorate([
     (0, common_1.Controller)('dashboard'),
-    __metadata("design:paramtypes", [dashboard_service_1.DashboardService,
-        prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [dashboard_service_1.DashboardService])
 ], DashboardController);
 //# sourceMappingURL=dashboard.controller.js.map

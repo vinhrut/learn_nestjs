@@ -1,9 +1,7 @@
 import { DashboardService } from './dashboard.service';
-import { PrismaService } from '../prisma/prisma.service';
 export declare class DashboardController {
     private readonly dashboardService;
-    private readonly prisma;
-    constructor(dashboardService: DashboardService, prisma: PrismaService);
+    constructor(dashboardService: DashboardService);
     getOverview(user: {
         id: string;
     }): Promise<{
@@ -28,9 +26,7 @@ export declare class DashboardController {
             dueSoon: number;
         };
     }>;
-    getAdminOverview(user: {
-        id: string;
-    }): Promise<{
+    getAdminOverview(): Promise<{
         users: {
             total: number;
             active: number;

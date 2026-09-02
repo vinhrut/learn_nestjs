@@ -8,18 +8,32 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var ProjectService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProjectService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
-let ProjectService = class ProjectService {
+const mail_service_1 = require("../mail/mail.service");
+const notifications_service_1 = require("../notifications/notifications.service");
+const PROJECT_ROLE_LABEL = {
+    OWNER: 'Chủ sở hữu',
+    MANAGER: 'Quản lý',
+    MEMBER: 'Thành viên',
+    VIEWER: 'Người xem',
+};
+let ProjectService = ProjectService_1 = class ProjectService {
     prisma;
-    constructor(prisma) {
+    mail;
+    notifications;
+    logger = new common_1.Logger(ProjectService_1.name);
+    constructor(prisma, mail, notifications) {
         this.prisma = prisma;
+        this.mail = mail;
+        this.notifications = notifications;
     }
     async create(dto, user) {
         if (!user.roles.includes('LEAD')) {
-            throw new common_1.ForbiddenException('Only Leader can create project');
+            throw new common_1.ForbiddenException('Chỉ Trưởng nhóm mới được tạo dự án');
         }
         const existingProject = await this.prisma.projects.findUnique({
             where: {
@@ -27,7 +41,7 @@ let ProjectService = class ProjectService {
             },
         });
         if (existingProject) {
-            throw new common_1.ConflictException('Project code already exists');
+            throw new common_1.ConflictException('Mã dự án đã tồn tại');
         }
         if (dto.member_ids && dto.member_ids.length > 0) {
             const users = await this.prisma.users.findMany({
@@ -37,10 +51,10 @@ let ProjectService = class ProjectService {
                 },
             });
             if (users.length !== dto.member_ids.length) {
-                throw new common_1.NotFoundException('One or more member IDs are invalid');
+                throw new common_1.NotFoundException('Có thành viên không hợp lệ');
             }
         }
-        return this.prisma.$transaction(async (tx) => {
+        const project = await this.prisma.$transaction(async (tx) => {
             const project = await tx.projects.create({
                 data: {
                     name: dto.name,
@@ -71,6 +85,11 @@ let ProjectService = class ProjectService {
             }
             return project;
         });
+        const invitedIds = (dto.member_ids ?? []).filter((id) => id !== user.id);
+        if (invitedIds.length > 0) {
+            void this.notifyMembersAdded(project, invitedIds, 'MEMBER', user.id);
+        }
+        return project;
     }
     async findMyProjects(user) {
         if (user.roles.includes('LEAD')) {
@@ -143,7 +162,7 @@ let ProjectService = class ProjectService {
             },
         });
         if (!project) {
-            throw new common_1.ForbiddenException('You do not have access to this project');
+            throw new common_1.ForbiddenException('Bạn không có quyền truy cập dự án này');
         }
         return project;
     }
@@ -159,7 +178,7 @@ let ProjectService = class ProjectService {
             },
         });
         if (!hasAccess) {
-            throw new common_1.ForbiddenException('You do not have access to this project');
+            throw new common_1.ForbiddenException('Bạn không có quyền truy cập dự án này');
         }
         const members = await this.prisma.project_members.findMany({
             where: {
@@ -195,10 +214,10 @@ let ProjectService = class ProjectService {
             },
         });
         if (!project) {
-            throw new common_1.NotFoundException('Project not found');
+            throw new common_1.NotFoundException('Không tìm thấy dự án');
         }
         if (project.owner_id !== user.id) {
-            throw new common_1.ForbiddenException('Only project owner can view available users');
+            throw new common_1.ForbiddenException('Chỉ chủ sở hữu dự án mới xem được danh sách này');
         }
         const currentMemberIds = await this.prisma.project_members.findMany({
             where: {
@@ -247,10 +266,10 @@ let ProjectService = class ProjectService {
             },
         });
         if (!project) {
-            throw new common_1.NotFoundException('Project not found');
+            throw new common_1.NotFoundException('Không tìm thấy dự án');
         }
         if (project.owner_id !== user.id) {
-            throw new common_1.ForbiddenException('Only project owner can update project');
+            throw new common_1.ForbiddenException('Chỉ chủ sở hữu dự án mới được sửa dự án');
         }
         return this.prisma.projects.update({
             where: {
@@ -268,10 +287,10 @@ let ProjectService = class ProjectService {
             },
         });
         if (!project) {
-            throw new common_1.NotFoundException('Project not found');
+            throw new common_1.NotFoundException('Không tìm thấy dự án');
         }
         if (project.owner_id !== user.id) {
-            throw new common_1.ForbiddenException('Only project owner can add members');
+            throw new common_1.ForbiddenException('Chỉ chủ sở hữu dự án mới được thêm thành viên');
         }
         const targetUser = await this.prisma.users.findUnique({
             where: {
@@ -279,7 +298,7 @@ let ProjectService = class ProjectService {
             },
         });
         if (!targetUser) {
-            throw new common_1.NotFoundException('User not found');
+            throw new common_1.NotFoundException('Không tìm thấy người dùng');
         }
         const existingMember = await this.prisma.project_members.findUnique({
             where: {
@@ -290,15 +309,51 @@ let ProjectService = class ProjectService {
             },
         });
         if (existingMember) {
-            throw new common_1.ConflictException('User is already a member of this project');
+            throw new common_1.ConflictException('Người dùng đã là thành viên của dự án');
         }
-        return this.prisma.project_members.create({
+        const member = await this.prisma.project_members.create({
             data: {
                 project_id: projectId,
                 user_id: dto.user_id,
                 project_role: dto.project_role || 'MEMBER',
             },
         });
+        void this.notifyMembersAdded(project, [dto.user_id], member.project_role, user.id);
+        return member;
+    }
+    async notifyMembersAdded(project, memberIds, role, inviterId) {
+        try {
+            const [inviter, members] = await Promise.all([
+                this.prisma.users.findUnique({
+                    where: { id: inviterId },
+                    select: { full_name: true, email: true },
+                }),
+                this.prisma.users.findMany({
+                    where: { id: { in: memberIds }, deleted_at: null },
+                    select: { id: true, email: true, full_name: true },
+                }),
+            ]);
+            const inviterName = inviter?.full_name ?? inviter?.email ?? 'Quản trị viên';
+            for (const member of members) {
+                void this.mail.sendProjectMemberAddedEmail(member.email, {
+                    projectName: project.name,
+                    projectCode: project.code,
+                    projectRole: PROJECT_ROLE_LABEL[role],
+                    inviterName,
+                    full_name: member.full_name ?? undefined,
+                });
+                void this.notifications.notify({
+                    userId: member.id,
+                    type: 'PROJECT_MEMBER_ADDED',
+                    title: 'Bạn được thêm vào dự án',
+                    message: `${project.code} — ${project.name}`,
+                    extra: { projectId: project.id },
+                });
+            }
+        }
+        catch (error) {
+            this.logger.error(`Không gửi được thông báo thêm thành viên (project=${project.id}): ${error instanceof Error ? error.message : String(error)}`);
+        }
     }
     async removeMember(projectId, memberId, user) {
         const project = await this.prisma.projects.findUnique({
@@ -307,13 +362,13 @@ let ProjectService = class ProjectService {
             },
         });
         if (!project) {
-            throw new common_1.NotFoundException('Project not found');
+            throw new common_1.NotFoundException('Không tìm thấy dự án');
         }
         if (project.owner_id !== user.id) {
-            throw new common_1.ForbiddenException('Only project owner can remove members');
+            throw new common_1.ForbiddenException('Chỉ chủ sở hữu dự án mới được xoá thành viên');
         }
         if (memberId === project.owner_id) {
-            throw new common_1.ForbiddenException('Cannot remove project owner');
+            throw new common_1.ForbiddenException('Không thể xoá chủ sở hữu khỏi dự án');
         }
         await this.prisma.project_members.delete({
             where: {
@@ -324,13 +379,15 @@ let ProjectService = class ProjectService {
             },
         });
         return {
-            message: 'Member removed successfully',
+            message: 'Đã xoá thành viên khỏi dự án',
         };
     }
 };
 exports.ProjectService = ProjectService;
-exports.ProjectService = ProjectService = __decorate([
+exports.ProjectService = ProjectService = ProjectService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        mail_service_1.MailService,
+        notifications_service_1.NotificationsService])
 ], ProjectService);
 //# sourceMappingURL=projects.service.js.map

@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+  <body style="font-family: Arial, sans-serif; color: #1f2933; line-height: 1.5;">
+    <h2>Xin chào {{#if full_name}}{{full_name}}{{else}}bạn{{/if}},</h2>
+
+    <p>Bạn vừa được thêm vào một dự án trên hệ thống <strong>LearnNest</strong>.</p>
+
+    <table cellpadding="8" style="border-collapse: collapse; margin: 16px 0;">
+      <tr>
+        <td style="border: 1px solid #e4e7eb;"><strong>Dự án</strong></td>
+        <td style="border: 1px solid #e4e7eb;">{{projectName}}</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #e4e7eb;"><strong>Mã dự án</strong></td>
+        <td style="border: 1px solid #e4e7eb;">{{projectCode}}</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #e4e7eb;"><strong>Vai trò trong dự án</strong></td>
+        <td style="border: 1px solid #e4e7eb;">{{projectRole}}</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #e4e7eb;"><strong>Người thêm bạn</strong></td>
+        <td style="border: 1px solid #e4e7eb;">{{inviterName}}</td>
+      </tr>
+    </table>
+
+    <p>Vui lòng đăng nhập vào hệ thống để xem chi tiết dự án và các công việc liên quan.</p>
+
+    <p>Trân trọng,<br />LearnNest</p>
+  </body>
+</html>

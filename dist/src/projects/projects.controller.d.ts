@@ -7,13 +7,13 @@ export declare class ProjectController {
     private readonly projectService;
     constructor(projectService: ProjectService);
     findMyProjects(user: JwtUser): Promise<{
+        status: import("@prisma/client").$Enums.project_status;
         id: string;
         code: string;
         name: string;
         description: string | null;
         created_at: Date;
         updated_at: Date;
-        status: import("@prisma/client").$Enums.project_status;
         deleted_at: Date | null;
         owner_id: string;
     }[]>;
@@ -38,13 +38,13 @@ export declare class ProjectController {
             full_name: string | null;
         };
     } & {
+        status: import("@prisma/client").$Enums.project_status;
         id: string;
         code: string;
         name: string;
         description: string | null;
         created_at: Date;
         updated_at: Date;
-        status: import("@prisma/client").$Enums.project_status;
         deleted_at: Date | null;
         owner_id: string;
     }>;
@@ -70,24 +70,24 @@ export declare class ProjectController {
         role: import("@prisma/client").$Enums.role_code;
     }[]>;
     create(dto: CreateProjectDto, user: JwtUser): Promise<{
+        status: import("@prisma/client").$Enums.project_status;
         id: string;
         code: string;
         name: string;
         description: string | null;
         created_at: Date;
         updated_at: Date;
-        status: import("@prisma/client").$Enums.project_status;
         deleted_at: Date | null;
         owner_id: string;
     }>;
     update(projectId: string, dto: UpdateProjectDto, user: JwtUser): Promise<{
+        status: import("@prisma/client").$Enums.project_status;
         id: string;
         code: string;
         name: string;
         description: string | null;
         created_at: Date;
         updated_at: Date;
-        status: import("@prisma/client").$Enums.project_status;
         deleted_at: Date | null;
         owner_id: string;
     }>;

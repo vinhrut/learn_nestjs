@@ -48,6 +48,7 @@ const client_1 = require("@prisma/client");
 const bcrypt = __importStar(require("bcryptjs"));
 const prisma_service_1 = require("../prisma/prisma.service");
 const mail_service_1 = require("../mail/mail.service");
+const notifications_service_1 = require("../notifications/notifications.service");
 const update_user_dto_1 = require("./dto/update-user.dto");
 const userWithRoles = client_1.Prisma.validator()({
     include: { user_roles: { include: { roles: true } } },
@@ -55,9 +56,11 @@ const userWithRoles = client_1.Prisma.validator()({
 let UsersService = class UsersService {
     prisma;
     mailService;
-    constructor(prisma, mailService) {
+    notifications;
+    constructor(prisma, mailService, notifications) {
         this.prisma = prisma;
         this.mailService = mailService;
+        this.notifications = notifications;
     }
     findByEmail(email) {
         return this.prisma.users.findUnique({
@@ -114,9 +117,15 @@ let UsersService = class UsersService {
                 ...userWithRoles,
             });
             void this.mailService.sendNewAccountEmail(user.email, {
-                username: user.username,
+                email: user.email,
                 password: dto.password,
                 full_name: user.full_name ?? undefined,
+            });
+            void this.notifications.notify({
+                userId: user.id,
+                type: 'ACCOUNT_CREATED',
+                title: 'Tài khoản của bạn đã được tạo',
+                message: 'Quản trị viên đã tạo tài khoản cho bạn. Hãy đổi mật khẩu sau khi đăng nhập.',
             });
             return this.sanitizeUser(user);
         }
@@ -208,6 +217,12 @@ let UsersService = class UsersService {
                         full_name: user.full_name ?? undefined,
                         changes,
                         temporaryPassword: dto.password ?? undefined,
+                    });
+                    void this.notifications.notify({
+                        userId: id,
+                        type: 'ACCOUNT_UPDATED',
+                        title: 'Thông tin tài khoản của bạn đã được cập nhật',
+                        message: changes.join(', '),
                     });
                 }
             }
@@ -316,6 +331,7 @@ exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        mail_service_1.MailService])
+        mail_service_1.MailService,
+        notifications_service_1.NotificationsService])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

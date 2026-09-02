@@ -28,7 +28,11 @@ let MailService = MailService_1 = class MailService {
         }
     }
     sendNewAccountEmail(to, data) {
-        return this.sendTemplateMail(to, 'Tài khoản của bạn đã được tạo', 'new-account', data);
+        return this.sendTemplateMail(to, 'Tài khoản của bạn đã được tạo', 'new-account', {
+            email: data.email,
+            password: data.password,
+            full_name: data.full_name ?? undefined,
+        });
     }
     sendPasswordResetOtpEmail(to, data) {
         return this.sendTemplateMail(to, 'Mã xác nhận đặt lại mật khẩu', 'password-reset-otp', {
@@ -53,6 +57,15 @@ let MailService = MailService_1 = class MailService {
             assignerName: data.assignerName,
             priority: data.priority,
             dueDate: data.dueDate ?? undefined,
+            full_name: data.full_name ?? undefined,
+        });
+    }
+    sendProjectMemberAddedEmail(to, data) {
+        return this.sendTemplateMail(to, 'Bạn được thêm vào một dự án', 'project-member-added', {
+            projectName: data.projectName,
+            projectCode: data.projectCode,
+            projectRole: data.projectRole,
+            inviterName: data.inviterName,
             full_name: data.full_name ?? undefined,
         });
     }

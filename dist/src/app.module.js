@@ -21,7 +21,6 @@ const task_history_module_1 = require("./task-history/task-history.module");
 const mail_module_1 = require("./mail/mail.module");
 const dashboard_module_1 = require("./dashboard/dashboard.module");
 const realtime_module_1 = require("./realtime/realtime.module");
-const task_vinh_module_1 = require("./task_vinh/task-vinh.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -41,7 +40,6 @@ exports.AppModule = AppModule = __decorate([
             comment_module_1.CommentModule,
             task_history_module_1.TaskHistoryModule,
             dashboard_module_1.DashboardModule,
-            task_vinh_module_1.TaskVinhModule,
         ],
     })
 ], AppModule);

@@ -16,6 +16,7 @@ exports.TaskHistoryController = void 0;
 const common_1 = require("@nestjs/common");
 const task_history_service_1 = require("./task-history.service");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const task_access_guard_1 = require("../auth/guards/task-access.guard");
 let TaskHistoryController = class TaskHistoryController {
     taskHistoryService;
     constructor(taskHistoryService) {
@@ -27,6 +28,7 @@ let TaskHistoryController = class TaskHistoryController {
 };
 exports.TaskHistoryController = TaskHistoryController;
 __decorate([
+    (0, common_1.UseGuards)(task_access_guard_1.TaskAccessGuard),
     (0, common_1.Get)(':taskId'),
     __param(0, (0, common_1.Param)('taskId')),
     __metadata("design:type", Function),

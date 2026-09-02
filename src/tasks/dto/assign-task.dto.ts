@@ -9,11 +9,8 @@ import {
 } from 'class-validator';
 import { task_priority } from '@prisma/client';
 
-/**
- * Payload admin dùng để tạo + giao thẳng một task cho một user.
- * (Base flow — không có bước duyệt.)
- */
-export class CreateTaskDto {
+/** Payload Leader dùng để tạo + giao thẳng một task cho một user. */
+export class AssignTaskDto {
   @IsUUID()
   projectId: string;
 

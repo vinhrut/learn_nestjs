@@ -11,9 +11,9 @@ export declare class NotificationsController {
             id: string;
             created_at: Date;
             user_id: string;
+            title: string;
             task_id: string | null;
             type: import("@prisma/client").$Enums.notification_type;
-            title: string;
             message: string | null;
             is_read: boolean;
             read_at: Date | null;

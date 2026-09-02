@@ -14,8 +14,11 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TasksController = void 0;
 const common_1 = require("@nestjs/common");
+const client_1 = require("@prisma/client");
 const tasks_service_1 = require("./tasks.service");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../auth/guards/roles.guard");
+const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const current_user_decorator_1 = require("../auth/decorators/current-user.decorator");
 const create_task_dto_1 = require("./dto/create-task.dto");
 const update_task_dto_1 = require("./dto/update-task.dto");
@@ -24,6 +27,7 @@ const task_id_dto_1 = require("./dto/task-id.dto");
 const task_id_dto_2 = require("./dto/task-id.dto");
 const task_id_dto_3 = require("./dto/task-id.dto");
 const query_task_dto_1 = require("./dto/query-task.dto");
+const assign_task_dto_1 = require("./dto/assign-task.dto");
 let TasksController = class TasksController {
     tasksService;
     constructor(tasksService) {
@@ -34,6 +38,12 @@ let TasksController = class TasksController {
     }
     findByProject(projectId, user) {
         return this.tasksService.findByProject(projectId, user);
+    }
+    assignedToMe(user) {
+        return this.tasksService.listAssignedToMe(user.id);
+    }
+    assign(dto, user) {
+        return this.tasksService.assign(dto, user);
     }
     findOne(taskId, user) {
         return this.tasksService.findOne(taskId, user);
@@ -77,6 +87,23 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], TasksController.prototype, "findByProject", null);
+__decorate([
+    (0, common_1.Get)('assigned-to-me'),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], TasksController.prototype, "assignedToMe", null);
+__decorate([
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.role_code.LEAD),
+    (0, common_1.Post)('assign'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [assign_task_dto_1.AssignTaskDto, Object]),
+    __metadata("design:returntype", void 0)
+], TasksController.prototype, "assign", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),

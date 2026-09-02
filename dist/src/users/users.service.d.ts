@@ -1,6 +1,7 @@
 import { Prisma, role_code } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
@@ -21,7 +22,8 @@ export interface RequestUser {
 export declare class UsersService {
     private readonly prisma;
     private readonly mailService;
-    constructor(prisma: PrismaService, mailService: MailService);
+    private readonly notifications;
+    constructor(prisma: PrismaService, mailService: MailService, notifications: NotificationsService);
     findByEmail(email: string): Prisma.Prisma__usersClient<({
         user_roles: ({
             roles: {
@@ -38,6 +40,7 @@ export declare class UsersService {
             role_id: string;
         })[];
     } & {
+        status: import("@prisma/client").$Enums.user_status;
         id: string;
         created_at: Date;
         updated_at: Date;
@@ -47,7 +50,6 @@ export declare class UsersService {
         full_name: string | null;
         phone: string | null;
         avatar_url: string | null;
-        status: import("@prisma/client").$Enums.user_status;
         deleted_at: Date | null;
     }) | null, null, import("@prisma/client/runtime/library").DefaultArgs, Prisma.PrismaClientOptions>;
     findById(id: string): Prisma.Prisma__usersClient<({
@@ -66,6 +68,7 @@ export declare class UsersService {
             role_id: string;
         })[];
     } & {
+        status: import("@prisma/client").$Enums.user_status;
         id: string;
         created_at: Date;
         updated_at: Date;
@@ -75,7 +78,6 @@ export declare class UsersService {
         full_name: string | null;
         phone: string | null;
         avatar_url: string | null;
-        status: import("@prisma/client").$Enums.user_status;
         deleted_at: Date | null;
     }) | null, null, import("@prisma/client/runtime/library").DefaultArgs, Prisma.PrismaClientOptions>;
     toRoleCodes(user: UserWithRoles): role_code[];

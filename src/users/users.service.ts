@@ -9,6 +9,7 @@ import { Prisma, role_code } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ADMIN_ONLY_FIELDS, UpdateUserDto } from './dto/update-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
@@ -28,6 +29,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   findByEmail(email: string) {
@@ -91,16 +93,24 @@ export class UsersService {
         ...userWithRoles,
       });
 
-      // Gửi thông tin tài khoản (username + mật khẩu tạm thời) về email của
+      // Gửi thông tin đăng nhập (email + mật khẩu tạm thời) về email của
       // user vừa tạo. Dùng dto.password (plaintext) vì đây là chỗ duy nhất
       // trong luồng còn giữ nó trước khi bị hash ở trên.
       // Cố ý KHÔNG await: request tạo user phải trả về ngay khi ghi DB xong,
       // không chờ SMTP. MailService.sendTemplateMail() tự bắt lỗi bên trong
       // nên promise này không bao giờ reject (không cần .catch() ở đây).
       void this.mailService.sendNewAccountEmail(user.email, {
-        username: user.username,
+        email: user.email,
         password: dto.password,
         full_name: user.full_name ?? undefined,
+      });
+
+      void this.notifications.notify({
+        userId: user.id,
+        type: 'ACCOUNT_CREATED',
+        title: 'Tài khoản của bạn đã được tạo',
+        message:
+          'Quản trị viên đã tạo tài khoản cho bạn. Hãy đổi mật khẩu sau khi đăng nhập.',
       });
 
       return this.sanitizeUser(user);
@@ -212,6 +222,13 @@ export class UsersService {
             full_name: user.full_name ?? undefined,
             changes,
             temporaryPassword: dto.password ?? undefined,
+          });
+
+          void this.notifications.notify({
+            userId: id,
+            type: 'ACCOUNT_UPDATED',
+            title: 'Thông tin tài khoản của bạn đã được cập nhật',
+            message: changes.join(', '),
           });
         }
       }

@@ -8,14 +8,50 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var NotificationsService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
-let NotificationsService = class NotificationsService {
+const realtime_service_1 = require("../realtime/realtime.service");
+const realtime_constants_1 = require("../realtime/realtime.constants");
+let NotificationsService = NotificationsService_1 = class NotificationsService {
     prisma;
-    constructor(prisma) {
+    realtime;
+    logger = new common_1.Logger(NotificationsService_1.name);
+    constructor(prisma, realtime) {
         this.prisma = prisma;
+        this.realtime = realtime;
+    }
+    async notify(input) {
+        try {
+            const notification = await this.prisma.notifications.create({
+                data: {
+                    user_id: input.userId,
+                    task_id: input.taskId,
+                    type: input.type,
+                    title: input.title,
+                    message: input.message,
+                },
+            });
+            this.emit(notification, input.extra);
+        }
+        catch (error) {
+            this.logger.error(`Tạo thông báo thất bại (user=${input.userId}, type=${input.type}): ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+    emit(notification, extra) {
+        this.realtime.emitToUser(notification.user_id, realtime_constants_1.REALTIME_EVENT.NOTIFICATION, {
+            id: notification.id,
+            type: notification.type,
+            title: notification.title,
+            message: notification.message,
+            taskId: notification.task_id,
+            priority: null,
+            dueDate: null,
+            createdAt: notification.created_at,
+            ...extra,
+        });
     }
     async findMine(userId, query) {
         const page = query.page ?? 1;
@@ -69,8 +105,9 @@ let NotificationsService = class NotificationsService {
     }
 };
 exports.NotificationsService = NotificationsService;
-exports.NotificationsService = NotificationsService = __decorate([
+exports.NotificationsService = NotificationsService = NotificationsService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        realtime_service_1.RealtimeService])
 ], NotificationsService);
 //# sourceMappingURL=notifications.service.js.map
