@@ -35,7 +35,7 @@ export class CommentController {
     @Get("/:taskId")
     async getComment(
         @Param('taskId') taskId: string,
-        @Query('skip') skip: string = '0',
+        @Query('skip') skip: string = '1',
         @Query('limit') limit: string = '10',
     ) {
         return this.commentService.getCommentOfTask(taskId, skip, limit);

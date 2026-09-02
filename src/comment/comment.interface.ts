@@ -3,8 +3,11 @@ import { CreateComment } from "./comment.dto";
 
 export interface ICommentRepository {
     findAll(): Promise<any[]>;
-    findByTaskId(taskId: string,skip:string,limit:string): Promise<any[]>;
+    findByTaskId(taskId: string, skip: string, limit: string): Promise<{
+        data: any[];
+        totalPage: number;
+    }>;
     create(dto: CreateComment): Promise<any[]>;
-    deleteComment(id:string):Promise<string>
+    deleteComment(id: string): Promise<string>
 }
 export const COMMENT_REPOSITORY = 'COMMENT_REPOSITORY';

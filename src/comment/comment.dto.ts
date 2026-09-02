@@ -11,6 +11,9 @@ export class CreateComment {
     @IsString()
     @IsNotEmpty()
     content!: string;
+    @IsString()
+    @IsNotEmpty()
+    type!: string;
 }
 export class DeleteCommentDto {
     @IsString()
