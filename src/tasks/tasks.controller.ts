@@ -11,8 +11,12 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 
+import { role_code } from '@prisma/client';
+
 import { TasksService } from './tasks.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtUser } from '../auth/types/jwt-payload.type';
 
@@ -23,6 +27,7 @@ import { SubmitTaskDto } from './dto/task-id.dto';
 import { ApproveTaskDto } from './dto/task-id.dto';
 import { RejectTaskDto } from './dto/task-id.dto';
 import { QueryTaskDto } from './dto/query-task.dto';
+import { AssignTaskDto } from './dto/assign-task.dto';
 
 @Controller('tasks')
 @UseGuards(JwtAuthGuard)
@@ -46,6 +51,24 @@ export class TasksController {
     @CurrentUser() user: JwtUser,
   ) {
     return this.tasksService.findByProject(projectId, user);
+  }
+
+  // ==========================================
+  // GET TASKS ASSIGNED TO ME
+  // ==========================================
+  @Get('assigned-to-me')
+  assignedToMe(@CurrentUser() user: JwtUser) {
+    return this.tasksService.listAssignedToMe(user.id);
+  }
+
+  // ==========================================
+  // ASSIGN TASK (Leader tạo và giao thẳng)
+  // ==========================================
+  @UseGuards(RolesGuard)
+  @Roles(role_code.LEAD)
+  @Post('assign')
+  assign(@Body() dto: AssignTaskDto, @CurrentUser() user: JwtUser) {
+    return this.tasksService.assign(dto, user);
   }
 
   // ==========================================

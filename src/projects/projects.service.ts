@@ -2,8 +2,10 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { project_member_role } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -12,10 +14,25 @@ import { UpdateProjectDto } from './dto/update.dto';
 import { AddProjectMemberDto } from './dto/add-project-memeber.dto';
 
 import { JwtUser } from '../auth/types/jwt-payload.type';
+import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
+
+const PROJECT_ROLE_LABEL: Record<project_member_role, string> = {
+  OWNER: 'Chủ sở hữu',
+  MANAGER: 'Quản lý',
+  MEMBER: 'Thành viên',
+  VIEWER: 'Người xem',
+};
 
 @Injectable()
 export class ProjectService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ProjectService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   // =====================================================
   // CREATE PROJECT
@@ -24,7 +41,7 @@ export class ProjectService {
   async create(dto: CreateProjectDto, user: JwtUser) {
     // Chỉ Leader được tạo project
     if (!user.roles.includes('LEAD')) {
-      throw new ForbiddenException('Only Leader can create project');
+      throw new ForbiddenException('Chỉ Trưởng nhóm mới được tạo dự án');
     }
 
     // Kiểm tra project code đã tồn tại chưa
@@ -35,7 +52,7 @@ export class ProjectService {
     });
 
     if (existingProject) {
-      throw new ConflictException('Project code already exists');
+      throw new ConflictException('Mã dự án đã tồn tại');
     }
 
     // Validate member_ids nếu có
@@ -48,12 +65,12 @@ export class ProjectService {
       });
 
       if (users.length !== dto.member_ids.length) {
-        throw new NotFoundException('One or more member IDs are invalid');
+        throw new NotFoundException('Có thành viên không hợp lệ');
       }
     }
 
     // Tạo project với transaction - đảm bảo owner được thêm vào project_members
-    return this.prisma.$transaction(async (tx) => {
+    const project = await this.prisma.$transaction(async (tx) => {
       // Tạo project
       const project = await tx.projects.create({
         data: {
@@ -92,6 +109,13 @@ export class ProjectService {
 
       return project;
     });
+
+    const invitedIds = (dto.member_ids ?? []).filter((id) => id !== user.id);
+    if (invitedIds.length > 0) {
+      void this.notifyMembersAdded(project, invitedIds, 'MEMBER', user.id);
+    }
+
+    return project;
   }
 
   // =====================================================
@@ -183,7 +207,7 @@ export class ProjectService {
     });
 
     if (!project) {
-      throw new ForbiddenException('You do not have access to this project');
+      throw new ForbiddenException('Bạn không có quyền truy cập dự án này');
     }
 
     return project;
@@ -207,7 +231,7 @@ export class ProjectService {
     });
 
     if (!hasAccess) {
-      throw new ForbiddenException('You do not have access to this project');
+      throw new ForbiddenException('Bạn không có quyền truy cập dự án này');
     }
 
     const members = await this.prisma.project_members.findMany({
@@ -252,12 +276,12 @@ export class ProjectService {
     });
 
     if (!project) {
-      throw new NotFoundException('Project not found');
+      throw new NotFoundException('Không tìm thấy dự án');
     }
 
     if (project.owner_id !== user.id) {
       throw new ForbiddenException(
-        'Only project owner can view available users',
+        'Chỉ chủ sở hữu dự án mới xem được danh sách này',
       );
     }
 
@@ -318,12 +342,12 @@ export class ProjectService {
     });
 
     if (!project) {
-      throw new NotFoundException('Project not found');
+      throw new NotFoundException('Không tìm thấy dự án');
     }
 
     // Chỉ owner mới được sửa
     if (project.owner_id !== user.id) {
-      throw new ForbiddenException('Only project owner can update project');
+      throw new ForbiddenException('Chỉ chủ sở hữu dự án mới được sửa dự án');
     }
 
     return this.prisma.projects.update({
@@ -350,12 +374,12 @@ export class ProjectService {
     });
 
     if (!project) {
-      throw new NotFoundException('Project not found');
+      throw new NotFoundException('Không tìm thấy dự án');
     }
 
     // Chỉ owner mới được thêm member
     if (project.owner_id !== user.id) {
-      throw new ForbiddenException('Only project owner can add members');
+      throw new ForbiddenException('Chỉ chủ sở hữu dự án mới được thêm thành viên');
     }
 
     // Kiểm tra user tồn tại
@@ -366,7 +390,7 @@ export class ProjectService {
     });
 
     if (!targetUser) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('Không tìm thấy người dùng');
     }
 
     // Kiểm tra đã tồn tại
@@ -380,17 +404,77 @@ export class ProjectService {
     });
 
     if (existingMember) {
-      throw new ConflictException('User is already a member of this project');
+      throw new ConflictException('Người dùng đã là thành viên của dự án');
     }
 
     // Thêm member
-    return this.prisma.project_members.create({
+    const member = await this.prisma.project_members.create({
       data: {
         project_id: projectId,
         user_id: dto.user_id,
         project_role: dto.project_role || 'MEMBER',
       },
     });
+
+    void this.notifyMembersAdded(
+      project,
+      [dto.user_id],
+      member.project_role,
+      user.id,
+    );
+
+    return member;
+  }
+
+  // =====================================================
+  // NOTIFY MEMBERS ADDED
+  // =====================================================
+
+  private async notifyMembersAdded(
+    project: { id: string; name: string; code: string },
+    memberIds: string[],
+    role: project_member_role,
+    inviterId: string,
+  ): Promise<void> {
+    try {
+      const [inviter, members] = await Promise.all([
+        this.prisma.users.findUnique({
+          where: { id: inviterId },
+          select: { full_name: true, email: true },
+        }),
+        this.prisma.users.findMany({
+          where: { id: { in: memberIds }, deleted_at: null },
+          select: { id: true, email: true, full_name: true },
+        }),
+      ]);
+
+      const inviterName =
+        inviter?.full_name ?? inviter?.email ?? 'Quản trị viên';
+
+      for (const member of members) {
+        void this.mail.sendProjectMemberAddedEmail(member.email, {
+          projectName: project.name,
+          projectCode: project.code,
+          projectRole: PROJECT_ROLE_LABEL[role],
+          inviterName,
+          full_name: member.full_name ?? undefined,
+        });
+
+        void this.notifications.notify({
+          userId: member.id,
+          type: 'PROJECT_MEMBER_ADDED',
+          title: 'Bạn được thêm vào dự án',
+          message: `${project.code} — ${project.name}`,
+          extra: { projectId: project.id },
+        });
+      }
+    } catch (error) {
+      this.logger.error(
+        `Không gửi được thông báo thêm thành viên (project=${project.id}): ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 
   // =====================================================
@@ -405,17 +489,17 @@ export class ProjectService {
     });
 
     if (!project) {
-      throw new NotFoundException('Project not found');
+      throw new NotFoundException('Không tìm thấy dự án');
     }
 
     // Chỉ owner
     if (project.owner_id !== user.id) {
-      throw new ForbiddenException('Only project owner can remove members');
+      throw new ForbiddenException('Chỉ chủ sở hữu dự án mới được xoá thành viên');
     }
 
     // Không cho remove owner
     if (memberId === project.owner_id) {
-      throw new ForbiddenException('Cannot remove project owner');
+      throw new ForbiddenException('Không thể xoá chủ sở hữu khỏi dự án');
     }
 
     await this.prisma.project_members.delete({
@@ -428,7 +512,7 @@ export class ProjectService {
     });
 
     return {
-      message: 'Member removed successfully',
+      message: 'Đã xoá thành viên khỏi dự án',
     };
   }
 }

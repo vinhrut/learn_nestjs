@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -357,6 +358,9 @@ enum notification_type {
   STATUS_CHANGED
   TASK_DUE
   SYSTEM
+  ACCOUNT_CREATED
+  ACCOUNT_UPDATED
+  PROJECT_MEMBER_ADDED
 }
 
 enum otp_purpose {

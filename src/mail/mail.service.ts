@@ -26,13 +26,17 @@ export class MailService {
 
   sendNewAccountEmail(
     to: string,
-    data: { username: string; password: string; full_name?: string },
+    data: { email: string; password: string; full_name?: string },
   ): Promise<void> {
     return this.sendTemplateMail(
       to,
       'Tài khoản của bạn đã được tạo',
       'new-account',
-      data,
+      {
+        email: data.email,
+        password: data.password,
+        full_name: data.full_name ?? undefined,
+      },
     );
   }
 
@@ -103,6 +107,31 @@ export class MailService {
         assignerName: data.assignerName,
         priority: data.priority,
         dueDate: data.dueDate ?? undefined,
+        full_name: data.full_name ?? undefined,
+      },
+    );
+  }
+
+  /** Thông báo khi user được thêm vào một dự án. */
+  sendProjectMemberAddedEmail(
+    to: string,
+    data: {
+      projectName: string;
+      projectCode: string;
+      projectRole: string;
+      inviterName: string;
+      full_name?: string;
+    },
+  ): Promise<void> {
+    return this.sendTemplateMail(
+      to,
+      'Bạn được thêm vào một dự án',
+      'project-member-added',
+      {
+        projectName: data.projectName,
+        projectCode: data.projectCode,
+        projectRole: data.projectRole,
+        inviterName: data.inviterName,
         full_name: data.full_name ?? undefined,
       },
     );
