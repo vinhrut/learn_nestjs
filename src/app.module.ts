@@ -9,13 +9,17 @@ import { TasksModule } from './tasks/tasks.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CommentModule } from './comment/comment.module';
 import { TaskHistoryModule } from './task-history/task-history.module';
+import { TaskExtensionsModule } from './task-extensions/task-extensions.module';
 import { MailModule } from './mail/mail.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ExportModule } from './export/export.module';
+import { RealtimeModule } from './realtime/realtime.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     MailModule,
+    RealtimeModule,
     PrismaModule,
     UsersModule,
     AuthModule,
@@ -24,13 +28,10 @@ import { ExportModule } from './export/export.module';
     TasksModule,
     NotificationsModule,
     CommentModule,
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
     TaskHistoryModule,
+    TaskExtensionsModule,
     DashboardModule,
     ExportModule,
   ],
 })
 export class AppModule { }
-

@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -9,7 +10,8 @@ datasource db {
 
 model attachments {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  task_id     String    @db.Uuid
+  task_id     String?    @db.Uuid
+  project_id  String?    @db.Uuid
   uploaded_by String    @db.Uuid
   file_url    String
   file_name   String    @db.VarChar(255)
@@ -17,10 +19,11 @@ model attachments {
   size_bytes  BigInt?
   created_at  DateTime  @default(now()) @db.Timestamp(6)
   deleted_at  DateTime? @db.Timestamp(6)
-  tasks       tasks     @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_attachments_task")
+  tasks       tasks?     @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_attachments_task")
   users       users     @relation(fields: [uploaded_by], references: [id], onUpdate: NoAction, map: "fk_attachments_uploader")
-
+  projects    projects?  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   @@index([task_id], map: "idx_attachments_task_id")
+  @@index([project_id], map: "idx_attachments_project_id")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -39,6 +42,7 @@ model notifications {
   id         String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id    String            @db.Uuid
   task_id    String?           @db.Uuid
+  project_id String?           @db.Uuid
   type       notification_type
   title      String            @db.VarChar(255)
   message    String?
@@ -46,10 +50,12 @@ model notifications {
   created_at DateTime          @default(now()) @db.Timestamp(6)
   read_at    DateTime?         @db.Timestamp(6)
   tasks      tasks?            @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_notifications_task")
+  projects   projects?         @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_notifications_project")
   users      users             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_notifications_user")
 
   @@index([created_at], map: "idx_notifications_created_at")
   @@index([is_read], map: "idx_notifications_is_read")
+  @@index([project_id], map: "idx_notifications_project_id")
   @@index([task_id], map: "idx_notifications_task_id")
   @@index([type], map: "idx_notifications_type")
   @@index([user_id], map: "idx_notifications_user_id")
@@ -79,9 +85,12 @@ model projects {
   created_at      DateTime          @default(now()) @db.Timestamp(6)
   updated_at      DateTime          @default(now()) @db.Timestamp(6)
   deleted_at      DateTime?         @db.Timestamp(6)
+  notifications   notifications[]
   project_members project_members[]
   users           users             @relation(fields: [owner_id], references: [id], onUpdate: NoAction, map: "fk_projects_owner")
   tasks           tasks[]
+  attachments     attachments[]
+  task_comments   task_comments[]
 
   @@index([created_at], map: "idx_projects_created_at")
   @@index([owner_id], map: "idx_projects_owner_id")
@@ -169,17 +178,44 @@ model task_checklists {
 
 model task_comments {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  task_id    String    @db.Uuid
+  task_id    String?    @db.Uuid
+  project_id String?    @db.Uuid
   user_id    String    @db.Uuid
   content    String
+  type       String
   created_at DateTime  @default(now()) @db.Timestamp(6)
   updated_at DateTime  @default(now()) @db.Timestamp(6)
   deleted_at DateTime? @db.Timestamp(6)
-  tasks      tasks     @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_task_comments_task")
+  tasks      tasks?     @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_task_comments_task")
   users      users     @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "fk_task_comments_user")
-
+  projects   projects?  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   @@index([created_at], map: "idx_task_comments_created_at")
   @@index([task_id], map: "idx_task_comments_task_id")
+  @@index([project_id], map: "idx_task_comments_project_id")
+}
+
+model task_extension_requests {
+  id                                                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  task_id                                           String          @db.Uuid
+  requester_id                                      String          @db.Uuid
+  current_due_date                                  DateTime?       @db.Timestamp(6)
+  requested_due_date                                DateTime        @db.Timestamp(6)
+  reason                                            String
+  status                                            approval_status @default(PENDING)
+  requested_at                                      DateTime        @default(now()) @db.Timestamp(6)
+  reviewed_by                                       String?         @db.Uuid
+  reviewed_at                                       DateTime?       @db.Timestamp(6)
+  reject_reason                                     String?
+  created_at                                        DateTime        @default(now()) @db.Timestamp(6)
+  updated_at                                        DateTime        @default(now()) @db.Timestamp(6)
+  users_task_extension_requests_requester_idTousers users           @relation("task_extension_requests_requester_idTousers", fields: [requester_id], references: [id], onUpdate: NoAction, map: "fk_ter_requester")
+  users_task_extension_requests_reviewed_byTousers  users?          @relation("task_extension_requests_reviewed_byTousers", fields: [reviewed_by], references: [id], onUpdate: NoAction, map: "fk_ter_reviewer")
+  tasks                                             tasks           @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ter_task")
+
+  @@index([requested_at], map: "idx_ter_requested_at")
+  @@index([requester_id], map: "idx_ter_requester_id")
+  @@index([status], map: "idx_ter_status")
+  @@index([task_id], map: "idx_ter_task_id")
 }
 
 model task_histories {
@@ -250,6 +286,7 @@ model tasks {
   task_assignment_requests       task_assignment_requests[]
   task_checklists                task_checklists[]
   task_comments                  task_comments[]
+  task_extension_requests        task_extension_requests[]
   task_histories                 task_histories[]
   task_reminders                 task_reminders[]
   users_tasks_assignee_idTousers users?                     @relation("tasks_assignee_idTousers", fields: [assignee_id], references: [id], onUpdate: NoAction, map: "fk_tasks_assignee")
@@ -290,7 +327,11 @@ model users {
   full_name                                                             String?                    @db.VarChar(255)
   phone                                                                 String?                    @db.VarChar(30)
   avatar_url                                                            String?                    @db.VarChar(500)
+  avatar_public_id                                                      String?                    @db.VarChar(255)
   status                                                                user_status                @default(ACTIVE)
+  /// Cột STORED generated: lower + unaccent của username/email/full_name.
+  /// Chỉ dùng để tìm kiếm không dấu — KHÔNG set giá trị qua Prisma. Xem migration add_users_search_text.
+  search_text                                                           String?                    @db.Text
   created_at                                                            DateTime                   @default(now()) @db.Timestamp(6)
   updated_at                                                            DateTime                   @default(now()) @db.Timestamp(6)
   deleted_at                                                            DateTime?                  @db.Timestamp(6)
@@ -307,6 +348,8 @@ model users {
   task_assignment_requests_task_assignment_requests_requester_idTousers task_assignment_requests[] @relation("task_assignment_requests_requester_idTousers")
   task_assignment_requests_task_assignment_requests_reviewed_byTousers  task_assignment_requests[] @relation("task_assignment_requests_reviewed_byTousers")
   task_comments                                                         task_comments[]
+  task_extension_requests_task_extension_requests_requester_idTousers   task_extension_requests[]  @relation("task_extension_requests_requester_idTousers")
+  task_extension_requests_task_extension_requests_reviewed_byTousers    task_extension_requests[]  @relation("task_extension_requests_reviewed_byTousers")
   task_histories_task_histories_actor_idTousers                         task_histories[]           @relation("task_histories_actor_idTousers")
   task_histories_task_histories_new_assignee_idTousers                  task_histories[]           @relation("task_histories_new_assignee_idTousers")
   task_histories_task_histories_new_assigner_idTousers                  task_histories[]           @relation("task_histories_new_assigner_idTousers")
@@ -357,6 +400,12 @@ enum notification_type {
   STATUS_CHANGED
   TASK_DUE
   SYSTEM
+  ACCOUNT_CREATED
+  ACCOUNT_UPDATED
+  PROJECT_MEMBER_ADDED
+  DEADLINE_EXTENSION_REQUEST
+  DEADLINE_EXTENSION_APPROVED
+  DEADLINE_EXTENSION_REJECTED
 }
 
 enum otp_purpose {
@@ -387,6 +436,7 @@ enum role_code {
   BA
   ADMIN
   USER
+  LEAD
 }
 
 enum task_priority {
