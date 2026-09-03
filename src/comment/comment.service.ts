@@ -3,7 +3,11 @@ import { COMMENT_REPOSITORY } from './comment.interface';
 import type { ICommentRepository } from './comment.interface';
 import { ATTACHMENT_REPOSITORY } from './attach.interface';
 import type { IAttachmentRepository } from './attach.interface';
-import { CreateComment, CreateAttachmentDto, DeleteCommentDto } from './comment.dto';
+import {
+    CreateComment,
+    CreateAttachmentDto,
+    DeleteCommentDto,
+} from './comment.dto';
 import { CloudinaryService } from 'src/common/helpers/cloudinary.helper';
 @Injectable()
 export class CommentService {
@@ -18,20 +22,20 @@ export class CommentService {
     async getAll() {
         return this.commentRepository.findAll();
     }
-    async getCommentOfTask(taskId: string, skip: string, limit: string) {
-        return this.commentRepository.findByTaskId(taskId, skip, limit);
+    async findOneComment(id:string){
+        return this.commentRepository.findOneComment(id)
     }
-    async create(dto: CreateComment) {
-        return this.commentRepository.create(dto)
+    async getCommentOfTask(taskId: string, projectId: string, skip: string, limit: string) {
+        return this.commentRepository.findByTaskId(taskId, projectId, skip, limit);
+    }
+    async create(dto: CreateComment & { user_id: string }) {
+        return this.commentRepository.create(dto);
     }
     async deleteComment(id: string) {
-        return this.commentRepository.deleteComment(id)
+        return this.commentRepository.deleteComment(id);
     }
     // attach
-    async createAttach(
-        file: Express.Multer.File,
-        dto: CreateAttachmentDto,
-    ) {
+    async createAttach(file: any, dto: CreateAttachmentDto) {
         const result = await this.cloudinaryService.uploadFile(file);
         const attachment = await this.attachmentRepository.create({
             task_id: dto.task_id,
@@ -40,6 +44,7 @@ export class CommentService {
             file_name: file.originalname,
             mime_type: file.mimetype,
             size_bytes: BigInt(file.size),
+            project_id: dto.project_id,
         });
 
         // convert BigInt -> string trước khi trả JSON
@@ -48,9 +53,7 @@ export class CommentService {
             size_bytes: attachment.size_bytes?.toString(),
         };
     }
-    async deleteAttach(
-        id: string,
-    ) {
-        return await this.attachmentRepository.deleteAttach(id)
+    async deleteAttach(id: string) {
+        return await this.attachmentRepository.deleteAttach(id);
     }
 }

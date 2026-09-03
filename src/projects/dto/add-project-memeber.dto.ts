@@ -1,8 +1,4 @@
-import {
-  IsEnum,
-  IsNotEmpty,
-  IsUUID,
-} from 'class-validator';
+import { IsEnum, IsNotEmpty, IsUUID } from 'class-validator';
 
 import { project_member_role } from '@prisma/client';
 

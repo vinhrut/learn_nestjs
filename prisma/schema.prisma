@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -9,7 +10,8 @@ datasource db {
 
 model attachments {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  task_id     String    @db.Uuid
+  task_id     String?    @db.Uuid
+  project_id  String?    @db.Uuid
   uploaded_by String    @db.Uuid
   file_url    String
   file_name   String    @db.VarChar(255)
@@ -17,10 +19,11 @@ model attachments {
   size_bytes  BigInt?
   created_at  DateTime  @default(now()) @db.Timestamp(6)
   deleted_at  DateTime? @db.Timestamp(6)
-  tasks       tasks     @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_attachments_task")
+  tasks       tasks?     @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_attachments_task")
   users       users     @relation(fields: [uploaded_by], references: [id], onUpdate: NoAction, map: "fk_attachments_uploader")
-
+  projects    projects?  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   @@index([task_id], map: "idx_attachments_task_id")
+  @@index([project_id], map: "idx_attachments_project_id")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -82,6 +85,8 @@ model projects {
   project_members project_members[]
   users           users             @relation(fields: [owner_id], references: [id], onUpdate: NoAction, map: "fk_projects_owner")
   tasks           tasks[]
+  attachments     attachments[]
+  task_comments   task_comments[]
 
   @@index([created_at], map: "idx_projects_created_at")
   @@index([owner_id], map: "idx_projects_owner_id")
@@ -169,18 +174,20 @@ model task_checklists {
 
 model task_comments {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  task_id    String    @db.Uuid
+  task_id    String?    @db.Uuid
+  project_id String?    @db.Uuid
   user_id    String    @db.Uuid
   content    String
   type       String
   created_at DateTime  @default(now()) @db.Timestamp(6)
   updated_at DateTime  @default(now()) @db.Timestamp(6)
   deleted_at DateTime? @db.Timestamp(6)
-  tasks      tasks     @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_task_comments_task")
+  tasks      tasks?     @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_task_comments_task")
   users      users     @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "fk_task_comments_user")
-
+  projects   projects?  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   @@index([created_at], map: "idx_task_comments_created_at")
   @@index([task_id], map: "idx_task_comments_task_id")
+  @@index([project_id], map: "idx_task_comments_project_id")
 }
 
 model task_histories {
@@ -358,6 +365,9 @@ enum notification_type {
   STATUS_CHANGED
   TASK_DUE
   SYSTEM
+  ACCOUNT_CREATED
+  ACCOUNT_UPDATED
+  PROJECT_MEMBER_ADDED
 }
 
 enum otp_purpose {
@@ -388,6 +398,7 @@ enum role_code {
   BA
   ADMIN
   USER
+  LEAD
 }
 
 enum task_priority {
