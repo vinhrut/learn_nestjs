@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CloudinaryService } from '../common/helpers/cloudinary.helper';
+import { normalizeSearchTerm } from '../common/helpers/search.helper';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ADMIN_ONLY_FIELDS, UpdateUserDto } from './dto/update-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
@@ -128,18 +129,17 @@ export class UsersService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
+    const term = query.search ? normalizeSearchTerm(query.search) : '';
+
     const where: Prisma.usersWhereInput = {
       deleted_at: null,
       ...(query.status ? { status: query.status } : {}),
-      ...(query.search
-        ? {
-            OR: [
-              { username: { contains: query.search, mode: 'insensitive' } },
-              { email: { contains: query.search, mode: 'insensitive' } },
-              { full_name: { contains: query.search, mode: 'insensitive' } },
-            ],
-          }
+      ...(query.role
+        ? { user_roles: { some: { roles: { code: query.role } } } }
         : {}),
+      // Khớp với cột STORED `search_text` (đã lower + bỏ dấu ở tầng DB),
+      // nên tìm "nguyen" vẫn ra "Nguyễn". Không cần `mode: 'insensitive'`.
+      ...(term ? { search_text: { contains: term } } : {}),
     };
 
     const [items, total] = await this.prisma.$transaction([
@@ -148,7 +148,7 @@ export class UsersService {
         ...userWithRoles,
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: { created_at: 'desc' },
+        orderBy: { created_at: query.order ?? 'desc' },
       }),
       this.prisma.users.count({ where }),
     ]);

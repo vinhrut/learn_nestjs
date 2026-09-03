@@ -465,7 +465,7 @@ export class ProjectService {
           type: 'PROJECT_MEMBER_ADDED',
           title: 'Bạn được thêm vào dự án',
           message: `${project.code} — ${project.name}`,
-          extra: { projectId: project.id },
+          projectId: project.id,
         });
       }
     } catch (error) {

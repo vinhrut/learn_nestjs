@@ -11,6 +11,8 @@ export interface NotifyInput {
   title: string;
   message?: string;
   taskId?: string;
+  /** Dùng cho thông báo về dự án (PROJECT_MEMBER_ADDED) để client mở đúng dự án. */
+  projectId?: string;
   extra?: Record<string, unknown>;
 }
 
@@ -33,6 +35,7 @@ export class NotificationsService {
         data: {
           user_id: input.userId,
           task_id: input.taskId,
+          project_id: input.projectId,
           type: input.type,
           title: input.title,
           message: input.message,
@@ -59,6 +62,7 @@ export class NotificationsService {
       title: notification.title,
       message: notification.message,
       taskId: notification.task_id,
+      projectId: notification.project_id,
       priority: null,
       dueDate: null,
       createdAt: notification.created_at,
