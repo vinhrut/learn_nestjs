@@ -910,6 +910,7 @@ async function main() {
       task_id: discussionTask.id,
       user_id: discussionUsers[index % discussionUsers.length],
       content: `Trao đổi #${String(index + 1).padStart(2, '0')}: cập nhật tiến độ và kết quả kiểm thử.`,
+      type: 'comment',
       created_at: new Date(now - (28 - index) * HOUR),
       updated_at: new Date(now - (28 - index) * HOUR),
       deleted_at: index === 3 ? daysAgo(1) : null,
@@ -924,6 +925,7 @@ async function main() {
       task_id: task.id,
       user_id: task.assigneeId ?? task.creatorId,
       content: 'Đã cập nhật tiến độ, hiện chưa phát sinh trở ngại.',
+      type: 'comment',
       created_at: daysAgo(1),
       updated_at: daysAgo(1),
     });

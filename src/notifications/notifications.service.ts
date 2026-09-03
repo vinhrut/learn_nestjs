@@ -56,18 +56,22 @@ export class NotificationsService {
    * bên trong transaction và chỉ được phép đẩy đi sau khi commit.
    */
   emit(notification: notifications, extra?: Record<string, unknown>): void {
-    this.realtime.emitToUser(notification.user_id, REALTIME_EVENT.NOTIFICATION, {
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      taskId: notification.task_id,
-      projectId: notification.project_id,
-      priority: null,
-      dueDate: null,
-      createdAt: notification.created_at,
-      ...extra,
-    });
+    this.realtime.emitToUser(
+      notification.user_id,
+      REALTIME_EVENT.NOTIFICATION,
+      {
+        id: notification.id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        taskId: notification.task_id,
+        projectId: notification.project_id,
+        priority: null,
+        dueDate: null,
+        createdAt: notification.created_at,
+        ...extra,
+      },
+    );
   }
 
   /** Danh sách thông báo của user hiện tại (mới nhất trước), có phân trang. */

@@ -379,7 +379,9 @@ export class ProjectService {
 
     // Chỉ owner mới được thêm member
     if (project.owner_id !== user.id) {
-      throw new ForbiddenException('Chỉ chủ sở hữu dự án mới được thêm thành viên');
+      throw new ForbiddenException(
+        'Chỉ chủ sở hữu dự án mới được thêm thành viên',
+      );
     }
 
     // Kiểm tra user tồn tại
@@ -494,7 +496,9 @@ export class ProjectService {
 
     // Chỉ owner
     if (project.owner_id !== user.id) {
-      throw new ForbiddenException('Chỉ chủ sở hữu dự án mới được xoá thành viên');
+      throw new ForbiddenException(
+        'Chỉ chủ sở hữu dự án mới được xoá thành viên',
+      );
     }
 
     // Không cho remove owner
