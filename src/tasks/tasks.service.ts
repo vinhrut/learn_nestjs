@@ -18,6 +18,10 @@ import { Prisma, task_priority, task_status } from '@prisma/client';
 import { JwtUser } from '../auth/types/jwt-payload.type';
 import { MailService } from '../mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import {
+  pendingExtensionInclude,
+  pendingExtensionOf,
+} from '../task-extensions/extension.mapper';
 
 const taskCard = Prisma.validator<Prisma.tasksDefaultArgs>()({
   include: {
@@ -129,10 +133,7 @@ export class TasksService {
   // =====================================================
   // HELPER: Check project access
   // =====================================================
-  private async checkProjectAccess(
-    projectId: string,
-    user: JwtUser,
-  ): Promise<boolean> {
+  async checkProjectAccess(projectId: string, user: JwtUser): Promise<boolean> {
     const project = await this.prisma.projects.findFirst({
       where: {
         id: projectId,
@@ -181,6 +182,7 @@ export class TasksService {
     return this.prisma.tasks.findUnique({
       where: { id: taskId },
       include: {
+        ...pendingExtensionInclude,
         users_tasks_creator_idTousers: {
           select: {
             id: true,
@@ -503,6 +505,7 @@ export class TasksService {
         projects: {
           select: { id: true, name: true, code: true },
         },
+        ...pendingExtensionInclude,
       },
       orderBy: [{ board_position: 'asc' }, { created_at: 'desc' }],
     });
@@ -510,6 +513,9 @@ export class TasksService {
     // Generate code for each task
     return tasks.map((task, index) => ({
       ...task,
+      pending_extension_request: pendingExtensionOf(
+        task.task_extension_requests,
+      ),
       code: `TSK-${String(index + 1).padStart(4, '0')}`,
     }));
   }
@@ -551,6 +557,7 @@ export class TasksService {
         projects: {
           select: { id: true, name: true, code: true },
         },
+        ...pendingExtensionInclude,
       },
       orderBy: [{ board_position: 'asc' }, { created_at: 'desc' }],
     });
@@ -558,6 +565,9 @@ export class TasksService {
     // Generate code for each task
     return tasks.map((task, index) => ({
       ...task,
+      pending_extension_request: pendingExtensionOf(
+        task.task_extension_requests,
+      ),
       code: `TSK-${projectId.substring(0, 4).toUpperCase()}-${String(index + 1).padStart(3, '0')}`,
     }));
   }
@@ -580,6 +590,9 @@ export class TasksService {
 
     return {
       ...task,
+      pending_extension_request: pendingExtensionOf(
+        task.task_extension_requests,
+      ),
       code: `TSK-${task.project_id.substring(0, 4).toUpperCase()}-${task.id.substring(0, 4).toUpperCase()}`,
     };
   }

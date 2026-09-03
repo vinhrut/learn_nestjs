@@ -36,7 +36,6 @@ export class CommentController {
     private readonly commentGateway: CommentGateway,
   ) {}
 
-  // GET /comments — liệt kê chéo mọi task nên giới hạn cho ADMIN.
   @UseGuards(RolesGuard)
   @Roles(role_code.ADMIN)
   @Get()
@@ -60,7 +59,6 @@ export class CommentController {
     @Body() dto: CreateComment,
     @CurrentUser() user: JwtUser,
   ): Promise<string> {
-    // Tác giả lấy từ token, không tin `user_id` do client gửi lên.
     const comment = await this.commentService.create({
       ...dto,
       user_id: user.id,

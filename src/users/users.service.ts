@@ -10,6 +10,7 @@ import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { CloudinaryService } from '../common/helpers/cloudinary.helper';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ADMIN_ONLY_FIELDS, UpdateUserDto } from './dto/update-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
@@ -24,12 +25,22 @@ export interface RequestUser {
   roles: string[];
 }
 
+export interface UploadedImageFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+}
+
 @Injectable()
 export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
     private readonly notifications: NotificationsService,
+    private readonly cloudinary: CloudinaryService,
   ) {}
 
   findByEmail(email: string) {
@@ -93,12 +104,6 @@ export class UsersService {
         ...userWithRoles,
       });
 
-      // Gửi thông tin đăng nhập (email + mật khẩu tạm thời) về email của
-      // user vừa tạo. Dùng dto.password (plaintext) vì đây là chỗ duy nhất
-      // trong luồng còn giữ nó trước khi bị hash ở trên.
-      // Cố ý KHÔNG await: request tạo user phải trả về ngay khi ghi DB xong,
-      // không chờ SMTP. MailService.sendTemplateMail() tự bắt lỗi bên trong
-      // nên promise này không bao giờ reject (không cần .catch() ở đây).
       void this.mailService.sendNewAccountEmail(user.email, {
         email: user.email,
         password: dto.password,
@@ -184,6 +189,12 @@ export class UsersService {
       updated_at: new Date(),
     };
 
+    const avatarUrlChanged =
+      dto.avatar_url !== undefined && dto.avatar_url !== before.avatar_url;
+    if (avatarUrlChanged) {
+      data.avatar_public_id = null;
+    }
+
     if (dto.password) {
       data.password_hash = await bcrypt.hash(dto.password, 10);
     }
@@ -208,13 +219,14 @@ export class UsersService {
         ...userWithRoles,
       });
 
-      // Đổi mật khẩu (kể cả do admin đặt lại) → thu hồi mọi phiên đăng nhập.
       if (dto.password) {
         await this.revokeActiveRefreshTokens(id);
       }
 
-      // Gửi mail cho user khi quản trị viên sửa tài khoản của NGƯỜI KHÁC.
-      // User tự sửa hồ sơ của mình thì không gửi.
+      if (avatarUrlChanged) {
+        await this.destroyAvatarAsset(before.avatar_public_id);
+      }
+
       if (isAdmin && requester.id !== id) {
         const changes = this.diffUserChanges(before, dto);
         if (changes.length > 0) {
@@ -239,10 +251,66 @@ export class UsersService {
     }
   }
 
-  /**
-   * Đổi mật khẩu cho user (dùng chung cho luồng quên/đổi mật khẩu ở AuthService):
-   * hash mật khẩu mới và thu hồi toàn bộ refresh token đang hoạt động.
-   */
+  async updateAvatar(id: string, file: UploadedImageFile) {
+    const before = await this.findActiveById(id);
+
+    const uploaded = await this.cloudinary.uploadFile(file, {
+      folder: 'avatars',
+      publicId: `user-${id}-${Date.now()}`,
+    });
+
+    const user = await this.prisma.users.update({
+      where: { id },
+      data: {
+        avatar_url: uploaded.url,
+        avatar_public_id: uploaded.publicId,
+        updated_at: new Date(),
+      },
+      ...userWithRoles,
+    });
+
+    if (before.avatar_public_id !== uploaded.publicId) {
+      await this.destroyAvatarAsset(before.avatar_public_id);
+    }
+
+    return this.sanitizeUser(user);
+  }
+
+  async removeAvatar(id: string) {
+    const before = await this.findActiveById(id);
+
+    if (!before.avatar_url && !before.avatar_public_id) {
+      return this.sanitizeUser(before);
+    }
+
+    const user = await this.prisma.users.update({
+      where: { id },
+      data: {
+        avatar_url: null,
+        avatar_public_id: null,
+        updated_at: new Date(),
+      },
+      ...userWithRoles,
+    });
+
+    await this.destroyAvatarAsset(before.avatar_public_id);
+
+    return this.sanitizeUser(user);
+  }
+
+  private async destroyAvatarAsset(publicId: string | null): Promise<void> {
+    if (!publicId) return;
+    try {
+      await this.cloudinary.deleteFile(publicId, 'image');
+    } catch (error) {
+      console.error(
+        'Không xoá được ảnh đại diện cũ trên Cloudinary:',
+        publicId,
+        error,
+      );
+    }
+  }
+
   async changePassword(userId: string, newPassword: string): Promise<void> {
     await this.prisma.users.update({
       where: { id: userId },
@@ -254,7 +322,6 @@ export class UsersService {
     await this.revokeActiveRefreshTokens(userId);
   }
 
-  /** Nhãn tiếng Việt của các trường thực sự thay đổi giữa `before` và `dto`. */
   private diffUserChanges(before: UserWithRoles, dto: UpdateUserDto): string[] {
     const changes: string[] = [];
     const check = (

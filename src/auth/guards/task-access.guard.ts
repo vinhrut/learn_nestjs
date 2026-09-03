@@ -13,13 +13,6 @@ interface RequestUser {
   roles: string[];
 }
 
-/**
- * Chỉ cho phép thao tác trên một task khi người gọi là owner hoặc thành viên
- * của project chứa task đó.
- *
- * Id của task được lấy theo thứ tự: `:taskId` → `:id` → `body.task_id` →
- * `query.id_task` (khớp với các endpoint đang có, không đổi shape request).
- */
 @Injectable()
 export class TaskAccessGuard implements CanActivate {
   constructor(private readonly prisma: PrismaService) {}
