@@ -11,7 +11,7 @@ import { CommentModule } from './comment/comment.module';
 import { TaskHistoryModule } from './task-history/task-history.module';
 import { MailModule } from './mail/mail.module';
 import { DashboardModule } from './dashboard/dashboard.module';
-
+import { ExportModule } from './export/export.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -29,6 +29,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     }),
     TaskHistoryModule,
     DashboardModule,
+    ExportModule,
   ],
 })
 export class AppModule { }

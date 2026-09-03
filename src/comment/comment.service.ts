@@ -4,7 +4,7 @@ import type { ICommentRepository } from './comment.interface';
 import { ATTACHMENT_REPOSITORY } from './attach.interface';
 import type { IAttachmentRepository } from './attach.interface';
 import { CreateComment, CreateAttachmentDto, DeleteCommentDto } from './comment.dto';
-import { CloudinaryService } from 'src/common/helpers/cloudinary.helper';
+import { CloudinaryService } from '../common/helpers/cloudinary.helper';
 @Injectable()
 export class CommentService {
     constructor(
