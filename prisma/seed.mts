@@ -475,7 +475,6 @@ async function main() {
           old_status: entry.old,
           new_status: entry.next,
           comment: entry.comment,
-          // Giãn thời gian để nhật ký hiển thị đúng thứ tự.
           created_at: new Date(now - (entries.length - index) * DAY),
         },
       });

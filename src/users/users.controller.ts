@@ -7,9 +7,13 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { role_code } from '@prisma/client';
+import { imageFileValidationPipe } from '../common/helpers/upload.constants';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -19,7 +23,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { UsersService } from './users.service';
-import type { RequestUser } from './users.service';
+import type { RequestUser, UploadedImageFile } from './users.service';
 
 @Controller('users')
 export class UsersController {
@@ -53,6 +57,22 @@ export class UsersController {
     @CurrentUser() requester: RequestUser,
   ) {
     return this.usersService.update(id, dto, requester);
+  }
+
+  @UseGuards(JwtAuthGuard, SelfOrAdminGuard)
+  @Post(':id/avatar')
+  @UseInterceptors(FileInterceptor('file'))
+  uploadAvatar(
+    @Param('id') id: string,
+    @UploadedFile(imageFileValidationPipe()) file: UploadedImageFile,
+  ) {
+    return this.usersService.updateAvatar(id, file);
+  }
+
+  @UseGuards(JwtAuthGuard, SelfOrAdminGuard)
+  @Delete(':id/avatar')
+  removeAvatar(@Param('id') id: string) {
+    return this.usersService.removeAvatar(id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
