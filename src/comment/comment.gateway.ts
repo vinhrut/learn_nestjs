@@ -1,239 +1,217 @@
 import {
-    ConnectedSocket,
-    MessageBody,
-    SubscribeMessage,
-    WebSocketGateway,
-    WebSocketServer,
+  ConnectedSocket,
+  MessageBody,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
 } from '@nestjs/websockets';
 
 import { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({
-    cors: {
-        origin: '*',
-    },
+  cors: {
+    origin: '*',
+  },
 })
 export class CommentGateway {
+  @WebSocketServer()
+  server: Server;
 
-    @WebSocketServer()
-    server: Server;
+  // =========================================================
+  // SOCKET CONNECT
+  // =========================================================
 
-    // =========================================================
-    // SOCKET CONNECT
-    // =========================================================
+  handleConnection(client: Socket) {
+    console.log('=================================');
+    console.log('🔌 Socket connected:', client.id);
+    console.log('=================================');
+  }
 
-    handleConnection(client: Socket) {
-        console.log('=================================');
-        console.log('🔌 Socket connected:', client.id);
-        console.log('=================================');
+  // =========================================================
+  // SOCKET DISCONNECT
+  // =========================================================
+
+  handleDisconnect(client: Socket) {
+    console.log('=================================');
+    console.log('❌ Socket disconnected:', client.id);
+    console.log('=================================');
+  }
+
+  // =========================================================
+  // JOIN TASK
+  // =========================================================
+
+  @SubscribeMessage('join_task')
+  joinTask(@MessageBody() taskId: string, @ConnectedSocket() client: Socket) {
+    if (!taskId) {
+      console.log('❌ taskId không tồn tại');
+      return;
     }
 
-    // =========================================================
-    // SOCKET DISCONNECT
-    // =========================================================
+    const room = `task_${taskId}`;
 
-    handleDisconnect(client: Socket) {
-        console.log('=================================');
-        console.log('❌ Socket disconnected:', client.id);
-        console.log('=================================');
+    client.join(room);
+
+    console.log('=================================');
+    console.log('👤 Client:', client.id);
+    console.log('📌 Joined task room:', room);
+    console.log('=================================');
+
+    return {
+      success: true,
+      room,
+    };
+  }
+
+  // =========================================================
+  // JOIN PROJECT
+  // =========================================================
+
+  @SubscribeMessage('join_project')
+  joinProject(
+    @MessageBody() projectId: string,
+    @ConnectedSocket() client: Socket,
+  ) {
+    if (!projectId) {
+      console.log('❌ projectId không tồn tại');
+      return;
     }
 
-    // =========================================================
-    // JOIN TASK
-    // =========================================================
+    const room = `project_${projectId}`;
 
-    @SubscribeMessage('join_task')
-    joinTask(
-        @MessageBody() taskId: string,
-        @ConnectedSocket() client: Socket,
-    ) {
-        if (!taskId) {
-            console.log('❌ taskId không tồn tại');
-            return;
-        }
+    client.join(room);
 
-        const room = `task_${taskId}`;
+    console.log('=================================');
+    console.log('👤 Client:', client.id);
+    console.log('📌 Joined project room:', room);
+    console.log('=================================');
 
-        client.join(room);
+    return {
+      success: true,
+      room,
+    };
+  }
 
-        console.log('=================================');
-        console.log('👤 Client:', client.id);
-        console.log('📌 Joined task room:', room);
-        console.log('=================================');
+  // =========================================================
+  // NEW COMMENT
+  // =========================================================
 
-        return {
-            success: true,
-            room,
-        };
+  emitNewComment(
+    taskId: string | undefined,
+    projectId: string | undefined,
+    comment: any,
+  ) {
+    if (taskId) {
+      const room = `task_${taskId}`;
+      this.server.to(room).emit('new_comment', comment);
     }
 
-    // =========================================================
-    // JOIN PROJECT
-    // =========================================================
+    // Comment thuộc Project
+    if (projectId) {
+      const room = `project_${projectId}`;
 
-    @SubscribeMessage('join_project')
-    joinProject(
-        @MessageBody() projectId: string,
-        @ConnectedSocket() client: Socket,
-    ) {
-        if (!projectId) {
-            console.log('❌ projectId không tồn tại');
-            return;
-        }
+      console.log('📢 Emit new_comment tới:', room);
 
-        const room = `project_${projectId}`;
+      this.server.to(room).emit('new_comment', comment);
+    }
+  }
 
-        client.join(room);
+  // =========================================================
+  // NEW ATTACHMENT
+  // =========================================================
 
-        console.log('=================================');
-        console.log('👤 Client:', client.id);
-        console.log('📌 Joined project room:', room);
-        console.log('=================================');
-
-        return {
-            success: true,
-            room,
-        };
+  emitNewAttachment(
+    taskId: string | undefined,
+    projectId: string | undefined,
+    attachment: any,
+  ) {
+    if (taskId) {
+      const room = `task_${taskId}`;
+      this.server.to(room).emit('new_attachment', attachment);
     }
 
-    // =========================================================
-    // NEW COMMENT
-    // =========================================================
+    // Attachment thuộc Project
+    if (projectId) {
+      const room = `project_${projectId}`;
+      this.server.to(room).emit('new_attachment', attachment);
+    }
+  }
 
-    emitNewComment(
-        taskId: string | undefined,
-        projectId: string | undefined,
-        comment: any,
-    ) {
-       
-        if (taskId) {
-            const room = `task_${taskId}`;
-            this.server
-                .to(room)
-                .emit('new_comment', comment);
-        }
+  // =========================================================
+  // DELETE COMMENT
+  // =========================================================
 
-        // Comment thuộc Project
-        if (projectId) {
-            const room = `project_${projectId}`;
+  emitDeleteComment(
+    taskId: string | undefined,
+    projectId: string | undefined,
+    commentId: string,
+  ) {
+    console.log('=================================');
+    console.log('🔥 emitDeleteComment');
+    console.log('taskId:', taskId);
+    console.log('projectId:', projectId);
+    console.log('commentId:', commentId);
+    console.log('=================================');
 
-            console.log('📢 Emit new_comment tới:', room);
+    const data = {
+      id: commentId,
+    };
 
-            this.server
-                .to(room)
-                .emit('new_comment', comment);
-        }
+    // Xóa comment trong Task
+    if (taskId) {
+      const room = `task_${taskId}`;
+
+      console.log('📢 Emit comment_deleted tới:', room);
+
+      this.server.to(room).emit('comment_deleted', data);
     }
 
-    // =========================================================
-    // NEW ATTACHMENT
-    // =========================================================
+    // Xóa comment trong Project
+    if (projectId) {
+      const room = `project_${projectId}`;
 
-    emitNewAttachment(
-        taskId: string | undefined,
-        projectId: string | undefined,
-        attachment: any,
-    ) {
-        
-        if (taskId) {
-            const room = `task_${taskId}`;
-            this.server
-                .to(room)
-                .emit('new_attachment', attachment);
-        }
+      console.log('📢 Emit comment_deleted tới:', room);
 
-        // Attachment thuộc Project
-        if (projectId) {
-            const room = `project_${projectId}`;
-            this.server
-                .to(room)
-                .emit('new_attachment', attachment);
-        }
+      this.server.to(room).emit('comment_deleted', data);
+    }
+  }
+
+  // =========================================================
+  // DELETE ATTACHMENT
+  // =========================================================
+
+  emitDeleteAttachment(
+    taskId: string | undefined,
+    projectId: string | undefined,
+    attachmentId: string,
+  ) {
+    console.log('=================================');
+    console.log('🔥 emitDeleteAttachment');
+    console.log('taskId:', taskId);
+    console.log('projectId:', projectId);
+    console.log('attachmentId:', attachmentId);
+    console.log('=================================');
+
+    const data = {
+      id: attachmentId,
+    };
+
+    // Xóa attachment trong Task
+    if (taskId) {
+      const room = `task_${taskId}`;
+
+      console.log('📢 Emit attachment_deleted tới:', room);
+
+      this.server.to(room).emit('attachment_deleted', data);
     }
 
-    // =========================================================
-    // DELETE COMMENT
-    // =========================================================
+    // Xóa attachment trong Project
+    if (projectId) {
+      const room = `project_${projectId}`;
 
-    emitDeleteComment(
-        taskId: string | undefined,
-        projectId: string | undefined,
-        commentId: string,
-    ) {
-        console.log('=================================');
-        console.log('🔥 emitDeleteComment');
-        console.log('taskId:', taskId);
-        console.log('projectId:', projectId);
-        console.log('commentId:', commentId);
-        console.log('=================================');
+      console.log('📢 Emit attachment_deleted tới:', room);
 
-        const data = {
-            id: commentId,
-        };
-
-        // Xóa comment trong Task
-        if (taskId) {
-            const room = `task_${taskId}`;
-
-            console.log('📢 Emit comment_deleted tới:', room);
-
-            this.server
-                .to(room)
-                .emit('comment_deleted', data);
-        }
-
-        // Xóa comment trong Project
-        if (projectId) {
-            const room = `project_${projectId}`;
-
-            console.log('📢 Emit comment_deleted tới:', room);
-
-            this.server
-                .to(room)
-                .emit('comment_deleted', data);
-        }
+      this.server.to(room).emit('attachment_deleted', data);
     }
-
-    // =========================================================
-    // DELETE ATTACHMENT
-    // =========================================================
-
-    emitDeleteAttachment(
-        taskId: string | undefined,
-        projectId: string | undefined,
-        attachmentId: string,
-    ) {
-        console.log('=================================');
-        console.log('🔥 emitDeleteAttachment');
-        console.log('taskId:', taskId);
-        console.log('projectId:', projectId);
-        console.log('attachmentId:', attachmentId);
-        console.log('=================================');
-
-        const data = {
-            id: attachmentId,
-        };
-
-        // Xóa attachment trong Task
-        if (taskId) {
-            const room = `task_${taskId}`;
-
-            console.log('📢 Emit attachment_deleted tới:', room);
-
-            this.server
-                .to(room)
-                .emit('attachment_deleted', data);
-        }
-
-        // Xóa attachment trong Project
-        if (projectId) {
-            const room = `project_${projectId}`;
-
-            console.log('📢 Emit attachment_deleted tới:', room);
-
-            this.server
-                .to(room)
-                .emit('attachment_deleted', data);
-        }
-    }
+  }
 }

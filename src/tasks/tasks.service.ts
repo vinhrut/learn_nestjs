@@ -171,7 +171,8 @@ export class TasksService {
     if (userRoles.includes('LEAD')) return true;
 
     if (rule.ownership === 'creator') return isCreator;
-    if (rule.ownership === 'creator_or_assignee') return isCreator || isAssignee;
+    if (rule.ownership === 'creator_or_assignee')
+      return isCreator || isAssignee;
     return true;
   }
 
@@ -249,7 +250,11 @@ export class TasksService {
   // =====================================================
   // HELPER: Notify assignee (notification + realtime + mail)
   // =====================================================
-  private assignedNotificationData(taskId: string, assigneeId: string, title: string) {
+  private assignedNotificationData(
+    taskId: string,
+    assigneeId: string,
+    title: string,
+  ) {
     return {
       user_id: assigneeId,
       task_id: taskId,
@@ -368,47 +373,49 @@ export class TasksService {
     const priority = dto.priority ?? task_priority.MEDIUM;
     const dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
 
-    const { task, notification } = await this.prisma.$transaction(async (tx) => {
-      const task = await tx.tasks.create({
-        data: {
-          project_id: dto.projectId,
-          title: dto.title,
-          description: dto.description,
-          priority,
-          due_date: dueDate,
-          status: 'NEW',
-          assignment_status: 'ASSIGNED',
-          creator_id: user.id,
-          assigner_id: user.id,
-          assignee_id: dto.assigneeId,
-        },
-        ...taskCard,
-      });
+    const { task, notification } = await this.prisma.$transaction(
+      async (tx) => {
+        const task = await tx.tasks.create({
+          data: {
+            project_id: dto.projectId,
+            title: dto.title,
+            description: dto.description,
+            priority,
+            due_date: dueDate,
+            status: 'NEW',
+            assignment_status: 'ASSIGNED',
+            creator_id: user.id,
+            assigner_id: user.id,
+            assignee_id: dto.assigneeId,
+          },
+          ...taskCard,
+        });
 
-      await tx.task_histories.create({
-        data: {
-          task_id: task.id,
-          actor_id: user.id,
-          action: 'ASSIGNED',
-          new_status: 'NEW',
-          new_assignee_id: dto.assigneeId,
-          new_assigner_id: user.id,
-        },
-      });
+        await tx.task_histories.create({
+          data: {
+            task_id: task.id,
+            actor_id: user.id,
+            action: 'ASSIGNED',
+            new_status: 'NEW',
+            new_assignee_id: dto.assigneeId,
+            new_assigner_id: user.id,
+          },
+        });
 
-      const notification =
-        dto.assigneeId === user.id
-          ? null
-          : await tx.notifications.create({
-              data: this.assignedNotificationData(
-                task.id,
-                dto.assigneeId,
-                task.title,
-              ),
-            });
+        const notification =
+          dto.assigneeId === user.id
+            ? null
+            : await tx.notifications.create({
+                data: this.assignedNotificationData(
+                  task.id,
+                  dto.assigneeId,
+                  task.title,
+                ),
+              });
 
-      return { task, notification };
-    });
+        return { task, notification };
+      },
+    );
 
     // Đẩy realtime + email SAU khi transaction commit. Không await email.
     if (notification) {
@@ -698,9 +705,7 @@ export class TasksService {
       task.creator_id === user.id &&
       (task.status === 'DRAFT' || task.status === 'REJECTED');
     if (!isLead && !creatorCanEdit) {
-      throw new ForbiddenException(
-        'Bạn không có quyền sửa công việc này',
-      );
+      throw new ForbiddenException('Bạn không có quyền sửa công việc này');
     }
 
     // Không thể sửa công việc đã đóngs
@@ -787,9 +792,7 @@ export class TasksService {
       task.creator_id === user.id &&
       (task.status === 'DRAFT' || task.status === 'REJECTED');
     if (!user.roles.includes('LEAD') && !creatorCanDelete) {
-      throw new ForbiddenException(
-        'Bạn không có quyền xoá công việc này',
-      );
+      throw new ForbiddenException('Bạn không có quyền xoá công việc này');
     }
 
     // Soft delete
@@ -905,12 +908,16 @@ export class TasksService {
 
     // Only creator can submit
     if (task.creator_id !== user.id) {
-      throw new ForbiddenException('Chỉ người tạo mới được gửi duyệt công việc');
+      throw new ForbiddenException(
+        'Chỉ người tạo mới được gửi duyệt công việc',
+      );
     }
 
     // Can only submit DRAFT tasks
     if (task.status !== 'DRAFT') {
-      throw new BadRequestException('Chỉ công việc ở trạng thái Nháp mới gửi duyệt được');
+      throw new BadRequestException(
+        'Chỉ công việc ở trạng thái Nháp mới gửi duyệt được',
+      );
     }
 
     // Update status to WAITING_APPROVAL
@@ -1030,7 +1037,9 @@ export class TasksService {
   async reject(dto: RejectTaskDto, user: JwtUser) {
     // Only LEAD can reject
     if (!user.roles.includes('LEAD')) {
-      throw new ForbiddenException('Chỉ Trưởng nhóm mới được từ chối công việc');
+      throw new ForbiddenException(
+        'Chỉ Trưởng nhóm mới được từ chối công việc',
+      );
     }
 
     const task = await this.prisma.tasks.findUnique({

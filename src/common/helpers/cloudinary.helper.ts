@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 
-interface MulterFile {
+export interface MulterFile {
   fieldname: string;
   originalname: string;
   encoding: string;
@@ -52,7 +52,7 @@ export class CloudinaryService {
     return name
       .replace(/\.[^/.]+$/, '')
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[̀-ͯ]/g, '')
       .replace(/[^a-zA-Z0-9-_]/g, '_')
       .slice(0, 100);
   }
@@ -74,17 +74,20 @@ export class CloudinaryService {
           public_id:
             options.publicId ?? this.sanitizeFileName(file.originalname),
         },
-        (error, result) => {
-          if (error) {
-            console.log('CLOUDINARY ERROR:', error.message, error.http_code);
-            reject(error);
+        (
+          uploadError: Error | undefined,
+          uploadResult: UploadApiResponse | undefined,
+        ) => {
+          if (uploadError) {
+            console.log('CLOUDINARY ERROR:', uploadError.message);
+            reject(new Error(uploadError.message));
             return;
           }
-          if (!result) {
+          if (!uploadResult) {
             reject(new Error('Cloudinary trả về kết quả rỗng'));
             return;
           }
-          resolve(result);
+          resolve(uploadResult);
         },
       );
 
