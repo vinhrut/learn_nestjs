@@ -20,6 +20,17 @@ export interface CloudinaryUploadResult {
   size: number;
 }
 
+/**
+ * Tuỳ chọn ghi đè chỗ lưu file. Bỏ trống thì giữ nguyên hành vi mặc định:
+ * thư mục `images`/`files` và public_id lấy theo tên file gốc.
+ * Truyền `publicId` riêng khi tên file gốc có thể trùng giữa các người dùng
+ * (ví dụ ảnh đại diện), vì public_id trùng nhau sẽ ghi đè lên file của nhau.
+ */
+export interface CloudinaryUploadOptions {
+  folder?: string;
+  publicId?: string;
+}
+
 @Injectable()
 export class CloudinaryService {
   constructor(private readonly configService: ConfigService) {
@@ -46,17 +57,22 @@ export class CloudinaryService {
       .slice(0, 100);
   }
 
-  async uploadFile(file: MulterFile): Promise<CloudinaryUploadResult> {
+  async uploadFile(
+    file: MulterFile,
+    options: CloudinaryUploadOptions = {},
+  ): Promise<CloudinaryUploadResult> {
     const resourceType = this.resolveResourceType(file.mimetype);
 
     const result = await new Promise<UploadApiResponse>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           resource_type: resourceType,
-          folder: resourceType === 'image' ? 'images' : 'files',
+          folder:
+            options.folder ?? (resourceType === 'image' ? 'images' : 'files'),
           use_filename: true,
           unique_filename: true,
-          public_id: this.sanitizeFileName(file.originalname),
+          public_id:
+            options.publicId ?? this.sanitizeFileName(file.originalname),
         },
         (error, result) => {
           if (error) {
