@@ -1,0 +1,81 @@
+# render.yaml - Deploy Backend lên Render
+# https://render.com/docs/deploy-psql
+
+services:
+  - type: web
+    name: learnnest-api
+    env: node
+    region: singapore
+    plan: free
+    rootDir: .
+
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm run start:prod
+
+    healthCheckPath: /
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: DATABASE_URL
+        sync: false  # Sẽ set trong Render dashboard
+
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+
+      - key: SMTP_PORT
+        value: "587"
+
+      - key: SMTP_USER
+        sync: false
+
+      - key: SMTP_PASS
+        sync: false
+
+      - key: MAIL_FROM
+        value: "LearnNest <learnnest@example.com>"
+
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+
+      - key: CLOUDINARY_API_KEY
+        sync: false
+
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      - key: OTP_TTL_MINUTES
+        value: "10"
+
+      - key: OTP_MAX_ATTEMPTS
+        value: "5"
+
+      - key: OTP_RESEND_COOLDOWN_SECONDS
+        value: "60"
+
+      - key: OTP_LENGTH
+        value: "6"
+
+      - key: OTP_DEBUG_LOG
+        value: "false"
+
+  # PostgreSQL Database (Free tier)
+  - type: psql
+    name: learnnest-db
+    plan: free
+    region: singapore
+    databaseName: learnnest
+    ipAllowList: []

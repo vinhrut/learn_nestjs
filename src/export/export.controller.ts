@@ -4,7 +4,7 @@ import {
     Res,
     UseGuards,
 } from '@nestjs/common';
-import { Response } from 'express';
+import type { Response } from 'express';
 
 import { ExportService } from './export.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -20,7 +20,7 @@ export class ExportController {
     @Get('dashboard/excel')
     async exportDashboardExcel(
         @CurrentUser() user: { id: string },
-        @Res() res: Response,
+        @Res() res: import('express').Response,
     ) {
         const buffer =
             await this.exportService.exportDashboardExcel(
