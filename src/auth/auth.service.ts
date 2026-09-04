@@ -1,10 +1,12 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { createHash, randomUUID } from 'crypto';
 import type { StringValue } from 'ms';
@@ -12,11 +14,20 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { OtpService } from '../otp/otp.service';
 import { UsersService } from '../users/users.service';
+import {
+  BOOTSTRAP_ADMIN_DEFAULT_PASSWORD,
+  BOOTSTRAP_ADMIN_EMAIL,
+  BOOTSTRAP_ADMIN_FULL_NAME,
+  BOOTSTRAP_ADMIN_USERNAME,
+  DEFAULT_ROLES,
+} from './auth.constants';
 import { LoginDto } from './dto/login.dto';
 import { JwtPayload, RefreshJwtPayload } from './types/jwt-payload.type';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
@@ -27,7 +38,13 @@ export class AuthService {
   ) {}
 
   async login(dto: LoginDto) {
-    const user = await this.usersService.findByEmail(dto.email);
+    let user = await this.usersService.findByEmail(dto.email);
+
+    // Đường "mồi": chưa có tài khoản admin trong DB (server vừa deploy, chưa seed)
+    // → tự tạo role ADMIN + user admin rồi cho đăng nhập như bình thường.
+    if (!user && this.isBootstrapAdminLogin(dto)) {
+      user = await this.ensureBootstrapAdmin(dto.password);
+    }
 
     if (!user || user.deleted_at || user.status !== 'ACTIVE') {
       throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
@@ -59,6 +76,58 @@ export class AuthService {
         roles: this.usersService.toRoleCodes(user),
       },
     };
+  }
+
+  /** Có phải là lần đăng nhập mồi bằng đúng email + mật khẩu bootstrap không. */
+  private isBootstrapAdminLogin(dto: LoginDto): boolean {
+    const expectedPassword =
+      this.configService.get<string>('BOOTSTRAP_ADMIN_PASSWORD') ??
+      BOOTSTRAP_ADMIN_DEFAULT_PASSWORD;
+    return (
+      dto.email.toLowerCase() === BOOTSTRAP_ADMIN_EMAIL &&
+      dto.password === expectedPassword
+    );
+  }
+
+  /**
+   * Tạo bộ role mặc định (nếu bảng `roles` trống) và user admin đầu tiên. Chạy khi
+   * DB chưa có `admin@gmail.com`. An toàn với request song song: nếu bị trùng
+   * (P2002) thì đọc lại row đã có.
+   */
+  private async ensureBootstrapAdmin(password: string) {
+    await this.prisma.roles.createMany({
+      data: DEFAULT_ROLES,
+      skipDuplicates: true,
+    });
+
+    const adminRole = await this.prisma.roles.findUniqueOrThrow({
+      where: { code: 'ADMIN' },
+    });
+
+    try {
+      await this.prisma.users.create({
+        data: {
+          username: BOOTSTRAP_ADMIN_USERNAME,
+          email: BOOTSTRAP_ADMIN_EMAIL,
+          password_hash: await bcrypt.hash(password, 10),
+          full_name: BOOTSTRAP_ADMIN_FULL_NAME,
+          status: 'ACTIVE',
+          user_roles: { create: [{ role_id: adminRole.id }] },
+        },
+      });
+      this.logger.warn(
+        `Bootstrap admin "${BOOTSTRAP_ADMIN_EMAIL}" đã được tạo do DB chưa có tài khoản admin. Hãy đổi mật khẩu ngay sau khi đăng nhập.`,
+      );
+    } catch (error) {
+      if (!(
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      )) {
+        throw error;
+      }
+    }
+
+    return this.usersService.findByEmail(BOOTSTRAP_ADMIN_EMAIL);
   }
 
   async refreshTokens(refreshToken: string) {
