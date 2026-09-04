@@ -44,6 +44,57 @@ export class UsersService {
     private readonly cloudinary: CloudinaryService,
   ) {}
 
+  /**
+   * Seed user đầu tiên - không cần auth
+   * Chỉ hoạt động khi chưa có user nào trong database
+   */
+  async seedFirstUser(dto: CreateUserDto) {
+    // Kiểm tra đã có user chưa
+    const existingUsers = await this.prisma.users.count({
+      where: { deleted_at: null },
+    });
+
+    if (existingUsers > 0) {
+      return {
+        success: false,
+        message: 'Đã có user trong database. Cần xóa hết user trước khi seed.',
+      };
+    }
+
+    // Tạo ADMIN role nếu chưa có
+    let adminRole = await this.prisma.roles.findFirst({
+      where: { code: role_code.ADMIN },
+    });
+
+    if (!adminRole) {
+      adminRole = await this.prisma.roles.create({
+        data: { name: 'Administrator', code: role_code.ADMIN },
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+
+    const user = await this.prisma.users.create({
+      data: {
+        username: dto.username,
+        email: dto.email,
+        password_hash: passwordHash,
+        full_name: dto.full_name,
+        phone: dto.phone,
+        user_roles: {
+          create: { role_id: adminRole.id },
+        },
+      },
+      ...userWithRoles,
+    });
+
+    return {
+      success: true,
+      message: 'Tạo user thành công!',
+      user: this.sanitizeUser(user),
+    };
+  }
+
   findByEmail(email: string) {
     return this.prisma.users.findUnique({
       where: { email },

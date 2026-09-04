@@ -29,6 +29,15 @@ import type { RequestUser, UploadedImageFile } from './users.service';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  /**
+   * Public endpoint để seed user đầu tiên (không cần auth)
+   * Chỉ hoạt động khi chưa có user nào trong database
+   */
+  @Post('seed')
+  seedFirstUser(@Body() dto: CreateUserDto) {
+    return this.usersService.seedFirstUser(dto);
+  }
+
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(role_code.ADMIN)
   @Post()
