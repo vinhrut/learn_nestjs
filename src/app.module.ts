@@ -14,6 +14,7 @@ import { MailModule } from './mail/mail.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ExportModule } from './export/export.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { SetupModule } from './setup/setup.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     TaskExtensionsModule,
     DashboardModule,
     ExportModule,
+    SetupModule,
   ],
 })
 export class AppModule { }
