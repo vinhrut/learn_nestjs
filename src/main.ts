@@ -9,7 +9,8 @@ async function bootstrap() {
   const allowedOrigins = [
     'http://localhost:5173', // Local development
     'http://localhost:4173', // Vite preview
-    'https://learnnest-client.vercel.app', // Production Vercel
+    'https://learnnest-client.vercel.app', // Production Vercel (tên gốc, phòng khi domain rảnh)
+    'https://learnnest-client-theta.vercel.app', // Production Vercel thực tế (scope "Learn Nest" bị thêm hậu tố)
   ];
 
   app.enableCors({
