@@ -7,9 +7,9 @@ async function bootstrap() {
 
   // CORS configuration - allow multiple origins
   const allowedOrigins = [
-    'http://localhost:5173',  // Local development
-    'http://localhost:4173',  // Vite preview
-    'https://learnnest-client.vercel.app',  // Production Vercel
+    'http://localhost:5173', // Local development
+    'http://localhost:4173', // Vite preview
+    'https://learnnest-client.vercel.app', // Production Vercel
   ];
 
   app.enableCors({
@@ -22,7 +22,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0'); // bind 0.0.0.0 cho hosting (Render)
 
   console.log(`Backend running at http://localhost:${port}`);
 }
