@@ -1,11 +1,53 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { MailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
+import Handlebars from 'handlebars';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
+const BREVO_ENDPOINT = 'https://api.brevo.com/v3/smtp/email';
+
+/**
+ * Gửi mail qua HTTP API của Brevo thay vì SMTP.
+ * Lý do: Render free tier chặn toàn bộ outbound tới port SMTP (25/465/587)
+ * từ 26/09/2025, nên nodemailer luôn bị "Connection timeout". API của Brevo
+ * đi qua HTTPS (443) nên không dính giới hạn đó.
+ */
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
+  private readonly templateCache = new Map<
+    string,
+    HandlebarsTemplateDelegate
+  >();
+  private readonly senderName: string;
+  private readonly senderEmail: string;
 
-  constructor(private readonly mailerService: MailerService) {}
+  constructor(private readonly config: ConfigService) {
+    // MAIL_FROM đang ở dạng `"LearnNest <email@example.com>"`, còn Brevo cần
+    // tách riêng name và email nên phải bóc ra.
+    const mailFrom = (this.config.get<string>('MAIL_FROM') ?? '').trim();
+    const parsed = /^"?([^"<]*)"?\s*<(.+)>$/.exec(mailFrom);
+    this.senderName = parsed?.[1]?.trim() || 'LearnNest';
+    this.senderEmail =
+      parsed?.[2]?.trim() ||
+      mailFrom ||
+      (this.config.get<string>('SMTP_USER') ?? '');
+  }
+
+  private async getTemplate(
+    name: string,
+  ): Promise<HandlebarsTemplateDelegate> {
+    const cached = this.templateCache.get(name);
+    if (cached) return cached;
+
+    const source = await readFile(
+      join(__dirname, 'templates', `${name}.hbs`),
+      'utf8',
+    );
+    const compiled = Handlebars.compile(source);
+    this.templateCache.set(name, compiled);
+    return compiled;
+  }
 
   private async sendTemplateMail(
     to: string,
@@ -14,7 +56,26 @@ export class MailService {
     context: Record<string, unknown>,
   ): Promise<void> {
     try {
-      await this.mailerService.sendMail({ to, subject, template, context });
+      const render = await this.getTemplate(template);
+      const response = await fetch(BREVO_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'api-key': this.config.getOrThrow<string>('BREVO_API_KEY'),
+        },
+        body: JSON.stringify({
+          sender: { name: this.senderName, email: this.senderEmail },
+          to: [{ email: to }],
+          subject,
+          htmlContent: render(context),
+        }),
+      });
+
+      if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        throw new Error(`Brevo trả về ${response.status} ${body}`);
+      }
     } catch (error) {
       this.logger.error(
         `Gửi mail thất bại (to=${to}, template=${template}): ${
