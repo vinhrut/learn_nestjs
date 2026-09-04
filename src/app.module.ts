@@ -12,6 +12,7 @@ import { TaskHistoryModule } from './task-history/task-history.module';
 import { TaskExtensionsModule } from './task-extensions/task-extensions.module';
 import { MailModule } from './mail/mail.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { ExportModule } from './export/export.module';
 import { RealtimeModule } from './realtime/realtime.module';
 
 @Module({
@@ -30,6 +31,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     TaskHistoryModule,
     TaskExtensionsModule,
     DashboardModule,
+    ExportModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }

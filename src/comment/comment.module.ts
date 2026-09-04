@@ -5,7 +5,7 @@ import { CommentRepository } from './comment.repository';
 import { COMMENT_REPOSITORY } from './comment.interface';
 import { ATTACHMENT_REPOSITORY } from './attach.interface';
 import { AttachmentRepository } from './attachment.repository';
-import { CloudinaryModule } from 'src/common/helpers/cloudinary.module';
+import { CloudinaryModule } from '../common/helpers/cloudinary.module';
 import { CommentGateway } from './comment.gateway';
 @Module({
   imports: [CloudinaryModule],
@@ -19,11 +19,10 @@ import { CommentGateway } from './comment.gateway';
       useClass: CommentRepository,
     },
     AttachmentRepository,
-
     {
       provide: ATTACHMENT_REPOSITORY,
       useClass: AttachmentRepository,
     },
   ],
 })
-export class CommentModule {}
+export class CommentModule { }

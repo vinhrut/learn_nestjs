@@ -16,7 +16,7 @@ export class CommentService {
     @Inject(ATTACHMENT_REPOSITORY)
     private readonly attachmentRepository: IAttachmentRepository,
     private readonly cloudinaryService: CloudinaryService,
-  ) {}
+  ) { }
 
   async getAll() {
     return this.commentRepository.findAll();
