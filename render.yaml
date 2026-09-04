@@ -1,5 +1,6 @@
-# render.yaml - Deploy Backend lên Render
-# https://render.com/docs/deploy-psql
+# render.yaml - Deploy Backend lên Render (free plan)
+# Database KHÔNG khai báo ở đây: dùng Neon free (miễn phí vĩnh viễn), chỉ cần
+# dán connection string "unpooled" vào biến DATABASE_URL trong dashboard.
 
 services:
   - type: web
@@ -9,17 +10,26 @@ services:
     plan: free
     rootDir: .
 
-    buildCommand: npm install && npx prisma generate && npm run build
-    startCommand: npm run start:prod
+    # --include=dev là bắt buộc: NODE_ENV=production khiến npm bỏ qua
+    # devDependencies, mà `nest build` nằm trong @nestjs/cli (devDependency).
+    # postinstall đã tự chạy `prisma generate`.
+    buildCommand: npm ci --include=dev && npm run build
 
-    healthCheckPath: /
+    # Chạy `prisma migrate deploy` trước khi start (idempotent), nếu không
+    # database sẽ rỗng và mọi query đều lỗi.
+    startCommand: npm run start:migrate:prod
+
+    healthCheckPath: /health
 
     envVars:
+      - key: NODE_VERSION
+        value: "22"
+
       - key: NODE_ENV
         value: production
 
       - key: DATABASE_URL
-        sync: false  # Sẽ set trong Render dashboard
+        sync: false # Neon unpooled connection string, set trong dashboard
 
       - key: JWT_ACCESS_SECRET
         generateValue: true
@@ -45,8 +55,10 @@ services:
       - key: SMTP_PASS
         sync: false
 
+      # Gmail từ chối gửi nếu địa chỉ From không khớp tài khoản đã xác thực,
+      # nên đặt trong dashboard cho khớp SMTP_USER.
       - key: MAIL_FROM
-        value: "LearnNest <learnnest@example.com>"
+        sync: false
 
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
@@ -55,6 +67,9 @@ services:
         sync: false
 
       - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      - key: BOOTSTRAP_ADMIN_PASSWORD
         sync: false
 
       - key: OTP_TTL_MINUTES
@@ -71,11 +86,3 @@ services:
 
       - key: OTP_DEBUG_LOG
         value: "false"
-
-  # PostgreSQL Database (Free tier)
-  - type: psql
-    name: learnnest-db
-    plan: free
-    region: singapore
-    databaseName: learnnest
-    ipAllowList: []

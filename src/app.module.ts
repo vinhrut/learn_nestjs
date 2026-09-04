@@ -15,10 +15,12 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { ExportModule } from './export/export.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { SetupModule } from './setup/setup.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    HealthModule,
     MailModule,
     RealtimeModule,
     PrismaModule,
